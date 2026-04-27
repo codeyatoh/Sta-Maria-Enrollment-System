@@ -1,15 +1,8 @@
 import React from 'react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow } from
-'../ui/Table';
-import { CheckCircle2, CircleDashed, XCircle, ChevronRight } from 'lucide-react';
+
+import { CheckCircle2, CircleDashed, XCircle, ChevronRight, Users } from 'lucide-react';
 import { useParentData } from '../../lib/parentData';
 export function MyChildrenView({
   onSelectChild
