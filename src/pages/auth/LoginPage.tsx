@@ -232,17 +232,27 @@ export function LoginPage() {
             </div>
           </div>
 
-          <p className="px-8 text-center text-sm text-muted-foreground">
-            By clicking continue, you agree to our{' '}
-            <a href="#" className="underline underline-offset-4 hover:text-primary">
-              Terms of Service
-            </a>{' '}
-            and{' '}
-            <a href="#" className="underline underline-offset-4 hover:text-primary">
-              Privacy Policy
-            </a>
-            .
-          </p>
+          <div className="flex flex-col space-y-4 pt-2">
+            <Button
+              variant="outline"
+              type="button"
+              className="w-full h-11 rounded-xl font-bold border-2 hover:bg-slate-50 transition-all"
+              onClick={() => navigate('/signup')}>
+              Create new account
+            </Button>
+            
+            <p className="px-8 text-center text-sm text-muted-foreground">
+              By clicking continue, you agree to our{' '}
+              <a href="#" className="underline underline-offset-4 hover:text-primary">
+                Terms of Service
+              </a>{' '}
+              and{' '}
+              <a href="#" className="underline underline-offset-4 hover:text-primary">
+                Privacy Policy
+              </a>
+              .
+            </p>
+          </div>
         </div>
       </div>
     </div>
