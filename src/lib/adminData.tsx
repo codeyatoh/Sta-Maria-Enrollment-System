@@ -68,7 +68,7 @@ type AdminContextType = {
   updateSubject: (id: string, updates: Partial<Subject>) => void;
   deleteSubject: (id: string) => void;
   users: User[];
-  addUser: (u: Omit<User, 'id' | 'createdAt'>) => void;
+  addUser: (u: Omit<User, 'id' | 'createdAt'> & { id?: string; createdAt?: string }) => void;
   updateUser: (id: string, updates: Partial<User>) => void;
   deleteUser: (id: string) => void;
   assignments: Assignment[];
@@ -78,151 +78,12 @@ type AdminContextType = {
   setSetupComplete: (val: boolean) => void;
   isSystemInitialized: boolean;
 };
-const initialUsers: User[] = [
-{
-  id: '1',
-  firstName: 'Maria',
-  lastName: 'Santos',
-  gender: 'Female',
-  contactNumber: '09123456789',
-  email: 'maria.santos@school.edu',
-  role: 'Teacher',
-  status: 'Active',
-  createdAt: '2024-01-15'
-},
-{
-  id: '2',
-  firstName: 'Juan',
-  lastName: 'Dela Cruz',
-  gender: 'Male',
-  contactNumber: '09123456780',
-  email: 'juan.delacruz@school.edu',
-  role: 'Teacher',
-  status: 'Active',
-  createdAt: '2024-02-10'
-},
-{
-  id: '3',
-  firstName: 'Ana',
-  lastName: 'Garcia',
-  gender: 'Female',
-  contactNumber: '09123456781',
-  email: 'ana.garcia@school.edu',
-  role: 'Parent',
-  status: 'Pending',
-  createdAt: '2024-03-05'
-},
-{
-  id: '4',
-  firstName: 'Pedro',
-  lastName: 'Reyes',
-  gender: 'Male',
-  contactNumber: '09123456782',
-  email: 'pedro.reyes@school.edu',
-  role: 'Teacher',
-  status: 'Active',
-  createdAt: '2024-03-20'
-},
-{
-  id: '5',
-  firstName: 'Elena',
-  lastName: 'Gomez',
-  gender: 'Female',
-  contactNumber: '09123456783',
-  email: 'elena.gomez@school.edu',
-  role: 'Parent',
-  status: 'Active',
-  createdAt: '2024-04-01'
-}];
+const initialUsers: User[] = [];
 
-const initialClassrooms: Classroom[] = [
-{
-  id: '1',
-  roomName: 'Grade 1 - Room 101',
-  roomType: 'Lecture',
-  status: 'Available',
-  gradeLevel: '1',
-  createdAt: '2024-01-10'
-},
-{
-  id: '2',
-  roomName: 'Grade 2 - Room 102',
-  roomType: 'Lecture',
-  status: 'Available',
-  gradeLevel: '2',
-  createdAt: '2024-01-11'
-},
-{
-  id: '3',
-  roomName: 'Grade 3 - Lab 1',
-  roomType: 'Laboratory',
-  status: 'Maintenance',
-  gradeLevel: '3',
-  createdAt: '2024-01-12'
-}];
-
-const initialSections: Section[] = [
-{
-  id: '1',
-  name: 'Section A',
-  classroomId: '1',
-  gradeLevel: '1',
-  status: 'Active'
-},
-{
-  id: '2',
-  name: 'Section B',
-  classroomId: '1',
-  gradeLevel: '1',
-  status: 'Active'
-},
-{
-  id: '3',
-  name: 'Section A',
-  classroomId: '2',
-  gradeLevel: '2',
-  status: 'Active'
-}];
-
-const initialSubjects: Subject[] = [
-{
-  id: '1',
-  name: 'Mathematics',
-  code: 'MATH101',
-  gradeLevel: '1',
-  units: 3,
-  status: 'Active',
-  createdAt: '2024-01-10',
-  academicYear: '2024-2025'
-},
-{
-  id: '2',
-  name: 'Science',
-  code: 'SCI101',
-  gradeLevel: '1',
-  units: 3,
-  status: 'Active',
-  createdAt: '2024-01-11',
-  academicYear: '2024-2025'
-},
-{
-  id: '3',
-  name: 'English',
-  code: 'ENG101',
-  gradeLevel: '1',
-  units: 3,
-  status: 'Active',
-  createdAt: '2024-01-12',
-  academicYear: '2024-2025'
-}];
-
-const initialAssignments: Assignment[] = [
-{
-  id: '1',
-  teacherId: '1',
-  classroomId: '1',
-  sectionId: '1'
-}];
+const initialClassrooms: Classroom[] = [];
+const initialSections: Section[] = [];
+const initialSubjects: Subject[] = [];
+const initialAssignments: Assignment[] = [];
 
 const initialSchoolYear: SchoolYear = {
   id: '1',
@@ -292,13 +153,13 @@ export function AdminDataProvider({ children }: {children: ReactNode;}) {
   const deleteSubject = (id: string) => {
     setSubjects(subjects.filter(s => s.id !== id));
   };
-  const addUser = (u: Omit<User, 'id' | 'createdAt'>) =>
+  const addUser = (u: Omit<User, 'id' | 'createdAt'> & { id?: string; createdAt?: string }) =>
   setUsers([
   ...users,
   {
     ...u,
-    id: Date.now().toString(),
-    createdAt: new Date().toISOString().split('T')[0]
+    id: u.id || Date.now().toString(),
+    createdAt: u.createdAt || new Date().toISOString().split('T')[0]
   }]
   );
   const updateUser = (id: string, updates: Partial<User>) =>
