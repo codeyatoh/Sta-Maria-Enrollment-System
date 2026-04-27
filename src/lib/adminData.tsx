@@ -24,10 +24,17 @@ export type Subject = {
 };
 export type User = {
   id: string;
-  name: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  suffix?: string;
+  gender: 'Male' | 'Female' | 'Other';
+  contactNumber: string;
   email: string;
   role: 'Teacher' | 'Parent';
   status: 'Active' | 'Pending';
+  password?: string;
+  createdAt: string;
 };
 export type Assignment = {
   id: string;
@@ -56,38 +63,58 @@ type AdminContextType = {
 const initialUsers: User[] = [
 {
   id: '1',
-  name: 'Maria Santos',
+  firstName: 'Maria',
+  lastName: 'Santos',
+  gender: 'Female',
+  contactNumber: '09123456789',
   email: 'maria.santos@school.edu',
   role: 'Teacher',
-  status: 'Active'
+  status: 'Active',
+  createdAt: '2024-01-15'
 },
 {
   id: '2',
-  name: 'Juan Dela Cruz',
+  firstName: 'Juan',
+  lastName: 'Dela Cruz',
+  gender: 'Male',
+  contactNumber: '09123456780',
   email: 'juan.delacruz@school.edu',
   role: 'Teacher',
-  status: 'Active'
+  status: 'Active',
+  createdAt: '2024-02-10'
 },
 {
   id: '3',
-  name: 'Ana Garcia',
+  firstName: 'Ana',
+  lastName: 'Garcia',
+  gender: 'Female',
+  contactNumber: '09123456781',
   email: 'ana.garcia@school.edu',
   role: 'Parent',
-  status: 'Pending'
+  status: 'Pending',
+  createdAt: '2024-03-05'
 },
 {
   id: '4',
-  name: 'Pedro Reyes',
+  firstName: 'Pedro',
+  lastName: 'Reyes',
+  gender: 'Male',
+  contactNumber: '09123456782',
   email: 'pedro.reyes@school.edu',
   role: 'Teacher',
-  status: 'Active'
+  status: 'Active',
+  createdAt: '2024-03-20'
 },
 {
   id: '5',
-  name: 'Elena Gomez',
+  firstName: 'Elena',
+  lastName: 'Gomez',
+  gender: 'Female',
+  contactNumber: '09123456783',
   email: 'elena.gomez@school.edu',
   role: 'Parent',
-  status: 'Active'
+  status: 'Active',
+  createdAt: '2024-04-01'
 }];
 
 const initialClassrooms: Classroom[] = [
@@ -197,14 +224,17 @@ export function AdminDataProvider({ children }: {children: ReactNode;}) {
     id: Date.now().toString()
   }]
   );
-  const addUser = (u: Omit<User, 'id'>) =>
+  const addUser = (u: Omit<User, 'id' | 'createdAt'>) =>
   setUsers([
   ...users,
   {
     ...u,
-    id: Date.now().toString()
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString().split('T')[0]
   }]
   );
+  const updateUser = (id: string, updates: Partial<User>) =>
+    setUsers(users.map(u => u.id === id ? { ...u, ...updates } : u));
   const deleteUser = (id: string) => setUsers(users.filter((u) => u.id !== id));
   const addAssignment = (a: Omit<Assignment, 'id'>) =>
   setAssignments([
@@ -227,6 +257,7 @@ export function AdminDataProvider({ children }: {children: ReactNode;}) {
         addSubject,
         users,
         addUser,
+        updateUser,
         deleteUser,
         assignments,
         addAssignment,

@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Slot } from "@radix-ui/react-slot";
 import { cn } from "../utils";
@@ -89,17 +90,17 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
     const { open, setOpen } = React.useContext(DialogContext);
     if (!open) return null;
 
-    return (
-      <>
+    const content = (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
         <div
-          className="fixed inset-0 z-50 bg-black/10 supports-[backdrop-filter]:backdrop-blur-[2px]"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-300"
           onClick={() => setOpen(false)} />
         
         <div
           ref={ref}
           data-slot="dialog-content"
           className={cn(
-            "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-background p-4 text-sm ring-1 ring-foreground/10 sm:max-w-sm",
+            "relative z-[101] grid w-full gap-6 rounded-2xl bg-background p-6 shadow-2xl ring-1 ring-border animate-in fade-in zoom-in-95 duration-200 sm:max-w-lg",
             className
           )}
           {...props}>
@@ -109,15 +110,17 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="absolute top-2 right-2 inline-flex size-7 items-center justify-center rounded-md hover:bg-muted">
+            className="absolute top-4 right-4 inline-flex size-8 items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
             
               <X className="size-4" />
               <span className="sr-only">Close</span>
             </button>
           }
         </div>
-      </>);
+      </div>
+    );
 
+    return createPortal(content, document.body);
   }
 );
 DialogContent.displayName = "DialogContent";
@@ -134,7 +137,7 @@ const DialogFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLD
   <div
     ref={ref}
     data-slot="dialog-footer"
-    className={cn("-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end", className)}
+    className={cn("-mx-6 -mb-6 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-6 sm:flex-row sm:justify-end", className)}
     {...props} />
 
 

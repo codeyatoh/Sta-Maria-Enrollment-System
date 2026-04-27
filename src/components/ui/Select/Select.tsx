@@ -27,7 +27,22 @@ interface SelectProps {
 const Select: React.FC<SelectProps> = ({ children, value, defaultValue, onValueChange }) => {
   const [internalValue, setInternalValue] = React.useState(defaultValue ?? "");
   const [open, setOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const controlledValue = value !== undefined ? value : internalValue;
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open, setOpen]);
 
   const handleChange = (newValue: string) => {
     if (value === undefined) setInternalValue(newValue);
@@ -37,11 +52,10 @@ const Select: React.FC<SelectProps> = ({ children, value, defaultValue, onValueC
 
   return (
     <SelectContext.Provider value={{ value: controlledValue, onValueChange: handleChange, open, setOpen }}>
-      <div data-slot="select" className="relative inline-block">
+      <div ref={containerRef} data-slot="select" className="relative inline-block w-full">
         {children}
       </div>
     </SelectContext.Provider>);
-
 };
 
 interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -101,7 +115,7 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
         ref={ref}
         data-slot="select-content"
         className={cn(
-          "absolute top-full left-0 z-50 mt-1 min-w-36 overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10",
+          "absolute top-full left-0 z-[102] mt-1 min-w-36 overflow-hidden rounded-lg bg-background border border-border text-popover-foreground shadow-md animate-in fade-in zoom-in-95 duration-100",
           className
         )}
         {...props}>

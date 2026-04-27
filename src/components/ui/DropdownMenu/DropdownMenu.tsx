@@ -21,6 +21,7 @@ interface DropdownMenuProps {
 
 const DropdownMenu: React.FC<DropdownMenuProps> = ({ children, open, defaultOpen = false, onOpenChange }) => {
   const [isOpen, setIsOpen] = React.useState(defaultOpen);
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const controlledOpen = open !== undefined ? open : isOpen;
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -28,11 +29,24 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ children, open, defaultOpen
     onOpenChange?.(newOpen);
   };
 
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        handleOpenChange(false);
+      }
+    };
+    if (controlledOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [controlledOpen, handleOpenChange]);
+
   return (
     <DropdownMenuContext.Provider value={{ open: controlledOpen, setOpen: handleOpenChange }}>
-      <div className="relative inline-block">{children}</div>
+      <div ref={containerRef} className="relative inline-block">{children}</div>
     </DropdownMenuContext.Provider>);
-
 };
 
 const DropdownMenuTrigger = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }>(
