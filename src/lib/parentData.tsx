@@ -27,7 +27,12 @@ export type Child = {
     weight: string;
     bloodType: string;
     allergies: string;
-    conditions: string;
+    hasDiagnosis: boolean;
+    diagnoses: string[];
+    hasManifestations: boolean;
+    manifestations: string[];
+    hasPwdId: boolean;
+    pwdId: string;
     emergencyContact: string;
     emergencyPhone: string;
   };
@@ -36,6 +41,8 @@ export type Child = {
     religion: string;
     isIndigenous: boolean;
     indigenousGroup: string;
+    is4ps: boolean;
+    learningMode: 'Modular Print' | 'Digital' | 'Blended';
   };
   status: 'Pending' | 'Enrolled' | 'Rejected';
   requirements: 'Complete' | 'Incomplete' | string;
@@ -92,7 +99,12 @@ const initialChildren: Child[] = [
     weight: '20',
     bloodType: 'O+',
     allergies: 'None',
-    conditions: 'None',
+    hasDiagnosis: false,
+    diagnoses: [],
+    hasManifestations: false,
+    manifestations: [],
+    hasPwdId: false,
+    pwdId: '',
     emergencyContact: 'Maria Dela Cruz',
     emergencyPhone: '09123456789'
   },
@@ -100,7 +112,9 @@ const initialChildren: Child[] = [
     motherTongue: 'Tagalog',
     religion: 'Catholic',
     isIndigenous: false,
-    indigenousGroup: ''
+    indigenousGroup: '',
+    is4ps: false,
+    learningMode: 'Blended'
   },
   status: 'Enrolled',
   requirements: 'Complete',
@@ -128,7 +142,12 @@ const initialChildren: Child[] = [
     weight: '25',
     bloodType: 'O+',
     allergies: 'Peanuts',
-    conditions: 'Asthma',
+    hasDiagnosis: true,
+    diagnoses: ['Asthma'],
+    hasManifestations: false,
+    manifestations: [],
+    hasPwdId: false,
+    pwdId: '',
     emergencyContact: 'Maria Dela Cruz',
     emergencyPhone: '09123456789'
   },
@@ -136,7 +155,9 @@ const initialChildren: Child[] = [
     motherTongue: 'Tagalog',
     religion: 'Catholic',
     isIndigenous: false,
-    indigenousGroup: ''
+    indigenousGroup: '',
+    is4ps: false,
+    learningMode: 'Blended'
   },
   status: 'Pending',
   requirements: 'Missing Medical Certificate',
