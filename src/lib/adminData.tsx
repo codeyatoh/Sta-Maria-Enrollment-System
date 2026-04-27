@@ -26,6 +26,11 @@ export type Subject = {
   id: string;
   name: string;
   code: string;
+  gradeLevel: string;
+  units: number;
+  status: 'Active' | 'Inactive';
+  createdAt: string;
+  academicYear: string;
 };
 export type User = {
   id: string;
@@ -51,17 +56,24 @@ type AdminContextType = {
   schoolYear: SchoolYear | null;
   setSchoolYear: (sy: SchoolYear | null) => void;
   classrooms: Classroom[];
-  addClassroom: (c: Omit<Classroom, 'id'>) => void;
+  addClassroom: (c: Omit<Classroom, 'id' | 'createdAt'>) => void;
+  updateClassroom: (id: string, updates: Partial<Classroom>) => void;
+  deleteClassroom: (id: string) => void;
   sections: Section[];
   addSection: (s: Omit<Section, 'id'>) => void;
+  updateSection: (id: string, updates: Partial<Section>) => void;
+  deleteSection: (id: string) => void;
   subjects: Subject[];
-  addSubject: (s: Omit<Subject, 'id'>) => void;
+  addSubject: (s: Omit<Subject, 'id' | 'createdAt'>) => void;
+  updateSubject: (id: string, updates: Partial<Subject>) => void;
+  deleteSubject: (id: string) => void;
   users: User[];
   addUser: (u: Omit<User, 'id' | 'createdAt'>) => void;
   updateUser: (id: string, updates: Partial<User>) => void;
   deleteUser: (id: string) => void;
   assignments: Assignment[];
   addAssignment: (a: Omit<Assignment, 'id'>) => void;
+  deleteAssignment: (id: string) => void;
   setupComplete: boolean;
   setSetupComplete: (val: boolean) => void;
   isSystemInitialized: boolean;
@@ -176,17 +188,32 @@ const initialSubjects: Subject[] = [
 {
   id: '1',
   name: 'Mathematics',
-  code: 'MATH101'
+  code: 'MATH101',
+  gradeLevel: '1',
+  units: 3,
+  status: 'Active',
+  createdAt: '2024-01-10',
+  academicYear: '2024-2025'
 },
 {
   id: '2',
   name: 'Science',
-  code: 'SCI101'
+  code: 'SCI101',
+  gradeLevel: '1',
+  units: 3,
+  status: 'Active',
+  createdAt: '2024-01-11',
+  academicYear: '2024-2025'
 },
 {
   id: '3',
   name: 'English',
-  code: 'ENG101'
+  code: 'ENG101',
+  gradeLevel: '1',
+  units: 3,
+  status: 'Active',
+  createdAt: '2024-01-12',
+  academicYear: '2024-2025'
 }];
 
 const initialAssignments: Assignment[] = [
@@ -238,14 +265,33 @@ export function AdminDataProvider({ children }: {children: ReactNode;}) {
     id: Date.now().toString()
   }]
   );
-  const addSubject = (s: Omit<Subject, 'id'>) =>
+  const updateClassroom = (id: string, updates: Partial<Classroom>) =>
+    setClassrooms(classrooms.map(c => c.id === id ? { ...c, ...updates } : c));
+  const deleteClassroom = (id: string) => {
+    setClassrooms(classrooms.filter(c => c.id !== id));
+    setSections(sections.filter(s => s.classroomId !== id));
+    setAssignments(assignments.filter(a => a.classroomId !== id));
+  };
+  const updateSection = (id: string, updates: Partial<Section>) =>
+    setSections(sections.map(s => s.id === id ? { ...s, ...updates } : s));
+  const deleteSection = (id: string) => {
+    setSections(sections.filter(s => s.id !== id));
+    setAssignments(assignments.filter(a => a.sectionId !== id));
+  };
+  const addSubject = (s: Omit<Subject, 'id' | 'createdAt'>) =>
   setSubjects([
   ...subjects,
   {
     ...s,
-    id: Date.now().toString()
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString().split('T')[0]
   }]
   );
+  const updateSubject = (id: string, updates: Partial<Subject>) =>
+    setSubjects(subjects.map(s => s.id === id ? { ...s, ...updates } : s));
+  const deleteSubject = (id: string) => {
+    setSubjects(subjects.filter(s => s.id !== id));
+  };
   const addUser = (u: Omit<User, 'id' | 'createdAt'>) =>
   setUsers([
   ...users,
@@ -266,6 +312,7 @@ export function AdminDataProvider({ children }: {children: ReactNode;}) {
     id: Date.now().toString()
   }]
   );
+  const deleteAssignment = (id: string) => setAssignments(assignments.filter(a => a.id !== id));
   return (
     <AdminContext.Provider
       value={{
@@ -273,16 +320,23 @@ export function AdminDataProvider({ children }: {children: ReactNode;}) {
         setSchoolYear,
         classrooms,
         addClassroom,
+        updateClassroom,
+        deleteClassroom,
         sections,
         addSection,
+        updateSection,
+        deleteSection,
         subjects,
         addSubject,
+        updateSubject,
+        deleteSubject,
         users,
         addUser,
         updateUser,
         deleteUser,
         assignments,
         addAssignment,
+        deleteAssignment,
         setupComplete,
         setSetupComplete,
         isSystemInitialized
