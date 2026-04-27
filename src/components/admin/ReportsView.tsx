@@ -11,12 +11,14 @@ import {
 import { FileText, Download, CheckCircle2 } from 'lucide-react';
 import { useAdminData } from '../../lib/adminData';
 import { SF4ReportDocument } from './SF4ReportDocument';
+import { SF1ReportDocument } from './SF1ReportDocument';
 
 export function ReportsView() {
   const { schoolYear, classrooms, sections } = useAdminData();
   const [generating, setGenerating] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showSF4, setShowSF4] = useState(false);
+  const [showSF1, setShowSF1] = useState(false);
   const [reportMonth, setReportMonth] = useState('JANUARY');
 
   const handleGenerate = (reportId: string) => {
@@ -28,6 +30,8 @@ export function ReportsView() {
       
       if (reportId === 'sf4') {
         setShowSF4(true);
+      } else if (reportId === 'sf1') {
+        setShowSF1(true);
       }
     }, 1000);
   };
@@ -174,6 +178,12 @@ export function ReportsView() {
         <SF4ReportDocument 
           onClose={() => setShowSF4(false)} 
           reportMonth={reportMonth} 
+          schoolYear={schoolYear?.name || '2024-2025'} 
+        />
+      )}
+      {showSF1 && (
+        <SF1ReportDocument 
+          onClose={() => setShowSF1(false)} 
           schoolYear={schoolYear?.name || '2024-2025'} 
         />
       )}
