@@ -18,8 +18,10 @@ import { ParentDashboardView } from '../components/parent/ParentDashboardView';
 import { MyChildrenView } from '../components/parent/MyChildrenView';
 import { EnrollmentForm } from '../components/parent/EnrollmentForm';
 import { ChildDetailView } from '../components/parent/ChildDetailView';
+import { useAuth } from '../lib/AuthContext';
 function ParentPortalContent() {
   const navigate = useNavigate();
+  const { userData } = useAuth();
   const [activeView, setActiveView] = useState('dashboard');
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -144,13 +146,15 @@ function ParentPortalContent() {
         className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors"
         onClick={() => navigate('/')}>
         
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs shrink-0">
-            PU
+          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 uppercase">
+            {userData?.firstName?.charAt(0) || 'P'}{userData?.lastName?.charAt(0) || 'U'}
           </div>
           <div className="flex-1 overflow-hidden">
-            <p className="text-sm font-medium truncate">Parent User</p>
-            <p className="text-xs text-muted-foreground truncate">
-              parent@school.edu
+            <p className="text-sm font-bold truncate text-slate-900">
+              {userData?.firstName} {userData?.lastName}
+            </p>
+            <p className="text-[10px] text-muted-foreground truncate font-medium uppercase tracking-wider">
+              {userData?.relationship || 'Parent'} • {userData?.email}
             </p>
           </div>
           <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
