@@ -23,19 +23,38 @@ export function DashboardView() {
     classrooms: 0
   });
 
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  interface ActivityItem {
+    id: string;
+    initials: string;
+    name: string;
+    detail: string;
+    value: string;
+    color: string;
+    createdAt: Date;
+    type: string;
+  }
 
-  const getDate = (ts: any) => {
+  const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
+
+  const getDate = (ts: unknown): Date => {
     if (!ts) return new Date();
-    if (ts.toDate) return ts.toDate();
-    return new Date(ts);
+    
+    const isTimestamp = (val: unknown): val is { toDate: () => Date } => {
+      return typeof val === 'object' && val !== null && 'toDate' in val && typeof (val as Record<string, unknown>).toDate === 'function';
+    };
+    
+    if (isTimestamp(ts)) {
+      return ts.toDate();
+    }
+    
+    return new Date(ts as string | number | Date);
   };
 
   useEffect(() => {
     const usersUnsub = onSnapshot(query(collection(db, 'users')), (snapshot) => {
       let teachers = 0;
       let parents = 0;
-      let userActs: any[] = [];
+      const userActs: ActivityItem[] = [];
       
       snapshot.forEach(doc => {
         const data = doc.data();
@@ -64,7 +83,7 @@ export function DashboardView() {
     });
 
     const classroomsUnsub = onSnapshot(query(collection(db, 'classrooms')), (snapshot) => {
-      let classActs: any[] = [];
+      const classActs: ActivityItem[] = [];
       snapshot.forEach(doc => {
         const data = doc.data();
         classActs.push({
