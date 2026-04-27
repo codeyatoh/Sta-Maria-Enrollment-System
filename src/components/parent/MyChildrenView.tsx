@@ -57,72 +57,78 @@ export function MyChildrenView({
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        <Card className="bg-card border-border rounded-xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-muted/50 border-b border-border">
-                <TableRow className="hover:bg-transparent border-none">
-                  <TableHead className="font-semibold text-foreground pl-4 sm:pl-6 whitespace-nowrap">
-                    Name
-                  </TableHead>
-                  <TableHead className="font-semibold text-foreground whitespace-nowrap">
-                    Grade Level
-                  </TableHead>
-                  <TableHead className="font-semibold text-foreground whitespace-nowrap">
-                    Status
-                  </TableHead>
-                  <TableHead className="font-semibold text-foreground whitespace-nowrap">
-                    Requirements
-                  </TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {children.length === 0 ?
-                <TableRow>
-                    <TableCell
-                    colSpan={5}
-                    className="text-center py-8 text-muted-foreground">
-                    
-                      No children enrolled yet.
-                    </TableCell>
-                  </TableRow> :
+        {children.length === 0 ? (
+          <Card className="bg-card border-border rounded-xl p-12 text-center shadow-sm">
+            <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+              <Users className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold">No children enrolled yet</h3>
+            <p className="text-muted-foreground max-w-xs mx-auto mt-2">
+              Start your enrollment process by clicking "New Enrollment" in the sidebar.
+            </p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {children.map((child) => (
+              <Card 
+                key={child.id} 
+                className="group relative bg-card hover:bg-muted/30 border-border rounded-2xl p-6 shadow-sm transition-all duration-300 hover:shadow-md cursor-pointer overflow-hidden"
+                onClick={() => onSelectChild(child.id)}
+              >
+                {/* Background Decor */}
+                <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
+                
+                <div className="flex justify-between items-start mb-6 relative z-10">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
+                    {child.firstName.charAt(0)}{child.lastName.charAt(0)}
+                  </div>
+                  {getStatusBadge(child.status)}
+                </div>
 
-                children.map((child) =>
-                <TableRow
-                  key={child.id}
-                  className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
-                  onClick={() => onSelectChild(child.id)}>
-                  
-                      <TableCell className="font-medium text-foreground pl-4 sm:pl-6 whitespace-nowrap">
-                        {child.firstName} {child.lastName}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <Badge
-                      variant="outline"
-                      className="bg-transparent border-border text-muted-foreground font-normal rounded-full px-3">
-                      
-                          Grade {child.gradeLevel}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {getStatusBadge(child.status)}
-                      </TableCell>
-                      <TableCell
-                    className={`whitespace-nowrap ${child.requirements === 'Complete' ? 'text-green-600' : 'text-red-600 font-medium'}`}>
-                    
+                <div className="space-y-4 relative z-10">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 group-hover:text-primary transition-colors">
+                      {child.firstName} {child.lastName}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none rounded-md px-2 py-0 h-5 text-[10px] font-bold uppercase tracking-wider">
+                        Grade {child.gradeLevel}
+                      </Badge>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                        {child.gender}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Birthday</p>
+                      <p className="text-sm font-semibold text-slate-700">
+                        {new Date(child.birthDate).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          year: 'numeric' 
+                        })}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Requirements</p>
+                      <p className={`text-sm font-semibold truncate ${child.requirements === 'Complete' ? 'text-green-600' : 'text-orange-500'}`}>
                         {child.requirements}
-                      </TableCell>
-                      <TableCell>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                      </TableCell>
-                    </TableRow>
-                )
-                }
-              </TableBody>
-            </Table>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex items-center justify-between text-primary font-bold text-xs uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span>View Details</span>
+                  <ChevronRight className="w-4 h-4 translate-x-0 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Card>
+            ))}
           </div>
-        </Card>
+        )}
       </div>
     </div>);
 
