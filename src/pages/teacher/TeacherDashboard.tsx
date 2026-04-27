@@ -25,13 +25,19 @@ import { GradesView } from '../../components/teacher/GradesView';
 import { TeacherReportsView } from '../../components/teacher/TeacherReportsView';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
+import { useAuth } from '../../lib/AuthContext';
 
 function TeacherDashboardContent() {
   const navigate = useNavigate();
   const { students } = useTeacherData();
+  const { userData } = useAuth();
   const [activeView, setActiveView] = useState('dashboard');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  
+  const initials = userData ? `${userData.firstName?.charAt(0) || ''}${userData.lastName?.charAt(0) || ''}`.toUpperCase() : 'T';
+  const fullName = userData ? `${userData.firstName} ${userData.lastName}` : 'Teacher';
+  const userRole = userData?.role || 'teacher';
   const pendingCount = students.filter((s) => s.status === 'Pending').length;
 
   const handleLogout = async () => {
@@ -118,10 +124,10 @@ function TeacherDashboardContent() {
           className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors" 
           onClick={() => setShowUserMenu(!showUserMenu)}
         >
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs shrink-0">MS</div>
+          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs shrink-0">{initials}</div>
           <div className="flex-1 overflow-hidden">
-            <p className="text-sm font-bold truncate text-slate-900">Maria Santos</p>
-            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground truncate">Teacher</p>
+            <p className="text-sm font-bold truncate text-slate-900">{fullName}</p>
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground truncate">{userRole}</p>
           </div>
           {showUserMenu ? (
             <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -154,7 +160,7 @@ function TeacherDashboardContent() {
             <img src="/pasted-image.jpg" alt="Logo" className="w-6 h-6 rounded-md object-cover" />
             Teacher Portal
           </div>
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs">MS</div>
+          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs shrink-0">{initials}</div>
         </header>
         <div className="flex-1 overflow-hidden bg-muted/30">
           {renderActiveView()}
