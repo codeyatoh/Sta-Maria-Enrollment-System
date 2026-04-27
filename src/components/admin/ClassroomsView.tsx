@@ -19,8 +19,9 @@ import {
   SelectTrigger,
   SelectValue } from
 '../ui/Select';
-import { Plus, Home, Users } from 'lucide-react';
+import { Plus, Home, Users, Layout, Shield, Info } from 'lucide-react';
 import { useAdminData } from '../../lib/adminData';
+import { cn } from '../ui/utils';
 export function ClassroomsView() {
   const {
     classrooms,
@@ -33,13 +34,17 @@ export function ClassroomsView() {
   } = useAdminData();
   const [isAddClassroomOpen, setIsAddClassroomOpen] = useState(false);
   const [newClassroom, setNewClassroom] = useState({
-    name: '',
+    roomName: '',
+    roomType: 'Lecture' as 'Lecture' | 'Laboratory' | 'Multipurpose',
+    status: 'Available' as 'Available' | 'Full' | 'Maintenance',
     gradeLevel: ''
   });
   const [isAddSectionOpen, setIsAddSectionOpen] = useState(false);
   const [newSection, setNewSection] = useState({
     name: '',
-    classroomId: ''
+    classroomId: '',
+    gradeLevel: '',
+    status: 'Active' as 'Active' | 'Inactive'
   });
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [newAssign, setNewAssign] = useState({
@@ -53,7 +58,9 @@ export function ClassroomsView() {
     addClassroom(newClassroom);
     setIsAddClassroomOpen(false);
     setNewClassroom({
-      name: '',
+      roomName: '',
+      roomType: 'Lecture',
+      status: 'Available',
       gradeLevel: ''
     });
   };
@@ -63,7 +70,9 @@ export function ClassroomsView() {
     setIsAddSectionOpen(false);
     setNewSection({
       name: '',
-      classroomId: ''
+      classroomId: '',
+      gradeLevel: '',
+      status: 'Active'
     });
   };
   const handleAssign = (e: React.FormEvent) => {
@@ -137,8 +146,8 @@ export function ClassroomsView() {
                     </SelectTrigger>
                     <SelectContent>
                       {classrooms.map((c) =>
-                      <SelectItem key={c.id} value={c.id}>
-                          {c.name}
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.roomName}
                         </SelectItem>
                       )}
                     </SelectContent>
@@ -206,14 +215,35 @@ export function ClassroomsView() {
                   <Input
                     required
                     value={newSection.name}
-                    onChange={(e) =>
-                    setNewSection({
-                      ...newSection,
-                      name: e.target.value
-                    })
-                    }
+                    onChange={(e) => setNewSection({ ...newSection, name: e.target.value })}
                     placeholder="e.g. Section A" />
-                  
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Grade Level</Label>
+                    <Select
+                      value={newSection.gradeLevel}
+                      onValueChange={(v) => setNewSection({ ...newSection, gradeLevel: v })}>
+                      <SelectTrigger><SelectValue placeholder="Grade" /></SelectTrigger>
+                      <SelectContent>
+                        {[1,2,3,4,5,6].map(level => (
+                          <SelectItem key={level} value={level.toString()}>Grade {level}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select
+                      value={newSection.status}
+                      onValueChange={(v: any) => setNewSection({ ...newSection, status: v })}>
+                      <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Classroom</Label>
@@ -230,9 +260,11 @@ export function ClassroomsView() {
                       <SelectValue placeholder="Select classroom" />
                     </SelectTrigger>
                     <SelectContent>
-                      {classrooms.map((c) =>
-                      <SelectItem key={c.id} value={c.id}>
-                          {c.name}
+                      {classrooms
+                        .filter(c => !newSection.gradeLevel || c.gradeLevel === newSection.gradeLevel)
+                        .map((c) =>
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.roomName}
                         </SelectItem>
                       )}
                     </SelectContent>
@@ -270,32 +302,52 @@ export function ClassroomsView() {
               </DialogHeader>
               <form onSubmit={handleAddClassroom} className="space-y-4 pt-4">
                 <div className="space-y-2">
-                  <Label>Classroom Name</Label>
+                  <Label>Room Name</Label>
                   <Input
                     required
-                    value={newClassroom.name}
-                    onChange={(e) =>
-                    setNewClassroom({
-                      ...newClassroom,
-                      name: e.target.value
-                    })
-                    }
-                    placeholder="e.g. Grade 1" />
-                  
+                    value={newClassroom.roomName}
+                    onChange={(e) => setNewClassroom({ ...newClassroom, roomName: e.target.value })}
+                    placeholder="e.g. Grade 1 - Room 101" />
                 </div>
                 <div className="space-y-2">
                   <Label>Grade Level</Label>
                   <Input
                     required
                     value={newClassroom.gradeLevel}
-                    onChange={(e) =>
-                    setNewClassroom({
-                      ...newClassroom,
-                      gradeLevel: e.target.value
-                    })
-                    }
+                    onChange={(e) => setNewClassroom({ ...newClassroom, gradeLevel: e.target.value })}
                     placeholder="e.g. 1" />
-                  
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Room Type</Label>
+                    <Select
+                      value={newClassroom.roomType}
+                      onValueChange={(v: any) => setNewClassroom({ ...newClassroom, roomType: v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Lecture">Lecture</SelectItem>
+                        <SelectItem value="Laboratory">Laboratory</SelectItem>
+                        <SelectItem value="Multipurpose">Multipurpose</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select
+                      value={newClassroom.status}
+                      onValueChange={(v: any) => setNewClassroom({ ...newClassroom, status: v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Available">Available</SelectItem>
+                        <SelectItem value="Full">Full</SelectItem>
+                        <SelectItem value="Maintenance">Maintenance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
                   <Button
@@ -333,20 +385,42 @@ export function ClassroomsView() {
                       <Home className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-lg">
-                        {classroom.name}
+                      <h3 className="font-semibold text-lg leading-tight">
+                        {classroom.roomName}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground mt-0.5">
                         Grade {classroom.gradeLevel}
                       </p>
                     </div>
                   </div>
-                  <Badge
-                    variant="secondary"
-                    className="bg-muted text-foreground">
-                    
-                    {classSections.length} Sections
-                  </Badge>
+                  <div className="flex flex-col gap-1 items-end">
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md",
+                        classroom.status === 'Available' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
+                        classroom.status === 'Full' ? "bg-amber-50 text-amber-600 border border-amber-100" :
+                        "bg-rose-50 text-rose-600 border border-rose-100"
+                      )}>
+                      {classroom.status}
+                    </Badge>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      {classroom.roomType}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between py-3 mb-4 border-y border-slate-50">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Created Date</span>
+                    <span className="text-xs font-semibold text-slate-600">
+                      {new Date(classroom.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sections</span>
+                    <span className="text-xs font-bold text-primary">{classSections.length} Active</span>
+                  </div>
                 </div>
 
                 <div className="space-y-3 flex-1">
@@ -367,9 +441,18 @@ export function ClassroomsView() {
                         key={section.id}
                         className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/30">
                         
-                          <span className="font-medium text-sm">
-                            {section.name}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm">
+                              {section.name}
+                            </span>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className={cn(
+                                "w-1.5 h-1.5 rounded-full",
+                                section.status === 'Active' ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
+                              )} />
+                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{section.status}</span>
+                            </div>
+                          </div>
                           {teacher ?
                         <div className="flex items-center text-xs text-muted-foreground">
                               <Users className="w-3 h-3 mr-1.5" />
