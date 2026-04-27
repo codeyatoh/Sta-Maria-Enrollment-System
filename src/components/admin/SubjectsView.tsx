@@ -167,16 +167,31 @@ export function SubjectsView() {
               </div>
               <div className="space-y-2">
                 <Label>Academic Year</Label>
-                <Select
-                  value={newSubject.academicYear}
-                  onValueChange={(v) => setNewSubject({ ...newSubject, academicYear: v })}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Select Year" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2023-2024">2023-2024</SelectItem>
-                    <SelectItem value="2024-2025">2024-2025</SelectItem>
-                    <SelectItem value="2025-2026">2025-2026</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    required
+                    placeholder="Start"
+                    value={newSubject.academicYear.split('-')[0] || ''}
+                    onChange={(e) => {
+                      const end = newSubject.academicYear.split('-')[1] || '';
+                      setNewSubject({ ...newSubject, academicYear: `${e.target.value}-${end}` });
+                    }}
+                    className="h-9"
+                  />
+                  <span className="text-muted-foreground">-</span>
+                  <Input
+                    type="number"
+                    required
+                    placeholder="End"
+                    value={newSubject.academicYear.split('-')[1] || ''}
+                    onChange={(e) => {
+                      const start = newSubject.academicYear.split('-')[0] || '';
+                      setNewSubject({ ...newSubject, academicYear: `${start}-${e.target.value}` });
+                    }}
+                    className="h-9"
+                  />
+                </div>
               </div>
               <DialogFooter className="pt-4 flex-col sm:flex-row gap-2 sm:gap-0">
                 <Button
@@ -359,16 +374,31 @@ export function SubjectsView() {
               </div>
               <div className="space-y-2">
                 <Label>Academic Year</Label>
-                <Select
-                  value={editingSubject.academicYear}
-                  onValueChange={(v) => setEditingSubject({ ...editingSubject, academicYear: v })}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Select Year" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2023-2024">2023-2024</SelectItem>
-                    <SelectItem value="2024-2025">2024-2025</SelectItem>
-                    <SelectItem value="2025-2026">2025-2026</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    required
+                    placeholder="Start"
+                    value={editingSubject.academicYear.split('-')[0] || ''}
+                    onChange={(e) => {
+                      const end = editingSubject.academicYear.split('-')[1] || '';
+                      setEditingSubject({ ...editingSubject, academicYear: `${e.target.value}-${end}` });
+                    }}
+                    className="h-9"
+                  />
+                  <span className="text-muted-foreground">-</span>
+                  <Input
+                    type="number"
+                    required
+                    placeholder="End"
+                    value={editingSubject.academicYear.split('-')[1] || ''}
+                    onChange={(e) => {
+                      const start = editingSubject.academicYear.split('-')[0] || '';
+                      setEditingSubject({ ...editingSubject, academicYear: `${start}-${e.target.value}` });
+                    }}
+                    className="h-9"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>
