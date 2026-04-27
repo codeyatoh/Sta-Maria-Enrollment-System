@@ -51,12 +51,20 @@ const SheetTrigger = React.forwardRef<HTMLButtonElement, SheetTriggerProps>(
 );
 SheetTrigger.displayName = "SheetTrigger";
 
-const SheetClose = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
-  ({ onClick, ...props }, ref) => {
+const SheetClose = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }>(
+  ({ onClick, asChild = false, ...props }, ref) => {
     const { setOpen } = React.useContext(SheetContext);
+    const Comp = asChild ? Slot : "button";
     return (
-      <button ref={ref} type="button" data-slot="sheet-close" onClick={(e) => {setOpen(false);onClick?.(e);}} {...props} />);
-
+      <Comp
+        ref={ref}
+        type="button"
+        data-slot="sheet-close"
+        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+          setOpen(false);
+          onClick?.(e);
+        }}
+        {...props} />);
   }
 );
 SheetClose.displayName = "SheetClose";

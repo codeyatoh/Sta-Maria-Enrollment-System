@@ -1,5 +1,6 @@
 import React from "react";
 import { ChevronDown, Check } from "lucide-react";
+import { Slot } from "@radix-ui/react-slot";
 import { cn } from "../utils";
 
 interface SelectContextType {
@@ -45,14 +46,16 @@ const Select: React.FC<SelectProps> = ({ children, value, defaultValue, onValueC
 
 interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: "sm" | "default";
+  asChild?: boolean;
 }
 
 const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
-  ({ className, size = "default", children, ...props }, ref) => {
+  ({ className, size = "default", children, asChild = false, ...props }, ref) => {
     const { open, setOpen } = React.useContext(SelectContext);
+    const Comp = asChild ? Slot : "button";
 
     return (
-      <button
+      <Comp
         ref={ref}
         type="button"
         data-slot="select-trigger"
@@ -68,8 +71,7 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
         
         {children}
         <ChevronDown className="pointer-events-none size-4 text-muted-foreground" />
-      </button>);
-
+      </Comp>);
   }
 );
 SelectTrigger.displayName = "SelectTrigger";

@@ -1,4 +1,5 @@
 import React from "react";
+import { Slot } from "@radix-ui/react-slot";
 import { cn } from "../utils";
 
 interface DropdownMenuContextType {
@@ -34,12 +35,21 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ children, open, defaultOpen
 
 };
 
-const DropdownMenuTrigger = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
-  ({ onClick, ...props }, ref) => {
+const DropdownMenuTrigger = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }>(
+  ({ onClick, asChild = false, ...props }, ref) => {
     const { open, setOpen } = React.useContext(DropdownMenuContext);
+    const Comp = asChild ? Slot : "button";
     return (
-      <button ref={ref} type="button" data-slot="dropdown-menu-trigger" aria-expanded={open} onClick={(e) => {setOpen(!open);onClick?.(e);}} {...props} />);
-
+      <Comp
+        ref={ref}
+        type="button"
+        data-slot="dropdown-menu-trigger"
+        aria-expanded={open}
+        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+          setOpen(!open);
+          onClick?.(e);
+        }}
+        {...props} />);
   }
 );
 DropdownMenuTrigger.displayName = "DropdownMenuTrigger";

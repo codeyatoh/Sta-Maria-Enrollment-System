@@ -1,4 +1,5 @@
 import React from "react";
+import { Slot } from "@radix-ui/react-slot";
 import { cn } from "../utils";
 
 interface TabsContextType {
@@ -67,15 +68,17 @@ TabsList.displayName = "TabsList";
 
 interface TabsTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   value: string;
+  asChild?: boolean;
 }
 
 const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
-  ({ className, value: tabValue, ...props }, ref) => {
+  ({ className, value: tabValue, asChild = false, ...props }, ref) => {
     const { value, onValueChange } = React.useContext(TabsContext);
     const isActive = value === tabValue;
+    const Comp = asChild ? Slot : "button";
 
     return (
-      <button
+      <Comp
         ref={ref}
         type="button"
         role="tab"
@@ -89,8 +92,6 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
           className
         )}
         {...props} />);
-
-
   }
 );
 TabsTrigger.displayName = "TabsTrigger";

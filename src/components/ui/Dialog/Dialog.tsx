@@ -1,5 +1,6 @@
 import React from "react";
 import { X } from "lucide-react";
+import { Slot } from "@radix-ui/react-slot";
 import { cn } from "../utils";
 
 interface DialogContextType {
@@ -40,43 +41,41 @@ interface DialogTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const DialogTrigger = React.forwardRef<HTMLButtonElement, DialogTriggerProps>(
-  ({ onClick, ...props }, ref) => {
+  ({ onClick, asChild = false, ...props }, ref) => {
     const { setOpen } = React.useContext(DialogContext);
+    const Comp = asChild ? Slot : "button";
 
     return (
-      <button
+      <Comp
         ref={ref}
         type="button"
         data-slot="dialog-trigger"
-        onClick={(e) => {
+        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
           setOpen(true);
           onClick?.(e);
         }}
         {...props} />);
-
-
   }
 );
 DialogTrigger.displayName = "DialogTrigger";
 
 type DialogCloseProps = React.ButtonHTMLAttributes<HTMLButtonElement>
 
-const DialogClose = React.forwardRef<HTMLButtonElement, DialogCloseProps>(
-  ({ onClick, ...props }, ref) => {
+const DialogClose = React.forwardRef<HTMLButtonElement, DialogCloseProps & { asChild?: boolean }>(
+  ({ onClick, asChild = false, ...props }, ref) => {
     const { setOpen } = React.useContext(DialogContext);
+    const Comp = asChild ? Slot : "button";
 
     return (
-      <button
+      <Comp
         ref={ref}
         type="button"
         data-slot="dialog-close"
-        onClick={(e) => {
+        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
           setOpen(false);
           onClick?.(e);
         }}
         {...props} />);
-
-
   }
 );
 DialogClose.displayName = "DialogClose";
