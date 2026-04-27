@@ -77,7 +77,7 @@ const generateMockAttendance = (): AttendanceRecord[] => {
   }
   return records;
 };
-const initialChildren: Child[] = [
+export const initialChildren: Child[] = [
 {
   id: '1',
   firstName: 'Juan',
