@@ -23,20 +23,69 @@ export function DashboardView() {
     classrooms: 0
   });
 
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+
+  const getDate = (ts: any) => {
+    if (!ts) return new Date();
+    if (ts.toDate) return ts.toDate();
+    return new Date(ts);
+  };
+
   useEffect(() => {
     const usersUnsub = onSnapshot(query(collection(db, 'users')), (snapshot) => {
       let teachers = 0;
       let parents = 0;
+      let userActs: any[] = [];
+      
       snapshot.forEach(doc => {
         const data = doc.data();
         if (data.role && data.role.toLowerCase() === 'teacher' && data.status === 'Active') teachers++;
         if (data.role && data.role.toLowerCase() === 'parent') parents++;
+        
+        userActs.push({
+          id: doc.id,
+          initials: (data.firstName?.[0] || '') + (data.lastName?.[0] || ''),
+          name: `${data.firstName || ''} ${data.lastName || ''}`,
+          detail: `New ${data.role || 'User'} added`,
+          value: data.status || 'Active',
+          color: data.status === 'Pending' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700',
+          createdAt: getDate(data.createdAt),
+          type: 'user'
+        });
       });
       setStatsData(prev => ({ ...prev, teachers, parents }));
+      
+      setRecentActivities(prev => {
+        const others = prev.filter(a => a.type !== 'user');
+        return [...others, ...userActs]
+          .sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .slice(0, 4);
+      });
     });
 
     const classroomsUnsub = onSnapshot(query(collection(db, 'classrooms')), (snapshot) => {
+      let classActs: any[] = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        classActs.push({
+          id: doc.id,
+          initials: data.roomName?.substring(0, 2).toUpperCase() || 'CR',
+          name: data.roomName || 'Classroom',
+          detail: `New Classroom added`,
+          value: data.status || 'Available',
+          color: 'bg-blue-100 text-blue-700',
+          createdAt: getDate(data.createdAt),
+          type: 'classroom'
+        });
+      });
       setStatsData(prev => ({ ...prev, classrooms: snapshot.size }));
+
+      setRecentActivities(prev => {
+        const others = prev.filter(a => a.type !== 'classroom');
+        return [...others, ...classActs]
+          .sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .slice(0, 4);
+      });
     });
 
     return () => {
@@ -75,35 +124,9 @@ export function DashboardView() {
     positive: true
   }];
 
-  const recentActivity = [
-  {
-    initials: 'MS',
-    name: 'Maria Santos',
-    detail: 'New teacher added',
-    value: 'Active',
-    color: 'bg-green-100 text-green-700'
-  },
-  {
-    initials: 'JD',
-    name: 'Juan Dela Cruz',
-    detail: 'Teacher assigned to Grade 1-A',
-    value: 'Completed',
-    color: 'bg-blue-100 text-blue-700'
-  },
-  {
-    initials: 'AG',
-    name: 'Ana Garcia',
-    detail: 'Parent enrollment pending',
-    value: 'Pending',
-    color: 'bg-orange-100 text-orange-700'
-  },
-  {
-    initials: 'PR',
-    name: 'Pedro Reyes',
-    detail: 'New teacher added',
-    value: 'Active',
-    color: 'bg-green-100 text-green-700'
-  }];
+  const today = new Date();
+  const currentMonthName = today.toLocaleString('default', { month: 'long' });
+  const recentCountThisMonth = recentActivities.filter(a => a.createdAt.getMonth() === today.getMonth() && a.createdAt.getFullYear() === today.getFullYear()).length;
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -150,14 +173,20 @@ export function DashboardView() {
             <div className="mb-6">
               <h3 className="text-lg font-semibold">Overview</h3>
               <p className="text-sm text-muted-foreground">
-                Total enrollments over the last 6 months
+                Historical enrollment trends
               </p>
             </div>
-            <div className="h-[300px] w-full">
+            <div className="h-[300px] w-full relative">
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px] rounded-lg">
+                <Badge variant="outline" className="mb-2 bg-background">System Initialized</Badge>
+                <p className="text-sm font-medium text-slate-600 text-center max-w-[200px]">
+                  Historical chart data is not yet available for SY 2026-2027.
+                </p>
+              </div>
               <svg
                 viewBox="0 0 1000 250"
                 preserveAspectRatio="none"
-                className="w-full h-full">
+                className="w-full h-full opacity-30 grayscale">
                 
                 <defs>
                   <linearGradient id="gradient1" x1="0" y1="0" x2="0" y2="1">
@@ -200,24 +229,32 @@ export function DashboardView() {
             <div className="mb-6">
               <h3 className="text-lg font-semibold">Recent Activity</h3>
               <p className="text-sm text-muted-foreground">
-                You made 265 actions this month.
+                {recentCountThisMonth > 0 
+                  ? `You have ${recentCountThisMonth} recent actions this ${currentMonthName}.`
+                  : `No recent activity in ${currentMonthName}.`}
               </p>
             </div>
             <div className="space-y-4">
-              {recentActivity.map((item, i) =>
-              <div key={i} className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-semibold text-sm">
-                    {item.initials}
+              {recentActivities.length > 0 ? (
+                recentActivities.map((item, i) =>
+                <div key={item.id || i} className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-semibold text-sm shrink-0">
+                      {item.initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {item.detail}
+                      </p>
+                    </div>
+                    <Badge className={`${item.color} border-none text-[10px] shrink-0`}>
+                      {item.value}
+                    </Badge>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{item.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {item.detail}
-                    </p>
-                  </div>
-                  <Badge className={`${item.color} border-none text-xs`}>
-                    {item.value}
-                  </Badge>
+                )
+              ) : (
+                <div className="text-center text-sm text-muted-foreground py-8">
+                  No activities recorded yet.
                 </div>
               )}
             </div>
