@@ -24,10 +24,10 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ children, open, defaultOpen
   const containerRef = React.useRef<HTMLDivElement>(null);
   const controlledOpen = open !== undefined ? open : isOpen;
 
-  const handleOpenChange = (newOpen: boolean) => {
+  const handleOpenChange = React.useCallback((newOpen: boolean) => {
     if (open === undefined) setIsOpen(newOpen);
     onOpenChange?.(newOpen);
-  };
+  }, [open, onOpenChange]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
