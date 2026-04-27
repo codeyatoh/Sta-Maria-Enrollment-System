@@ -92,13 +92,14 @@ SelectTrigger.displayName = "SelectTrigger";
 
 interface SelectValueProps {
   placeholder?: string;
+  children?: React.ReactNode;
 }
 
-const SelectValue: React.FC<SelectValueProps> = ({ placeholder }) => {
+const SelectValue: React.FC<SelectValueProps> = ({ placeholder, children }) => {
   const { value } = React.useContext(SelectContext);
   return (
     <span data-slot="select-value" data-placeholder={!value || undefined} className={cn(!value && "text-muted-foreground")}>
-      {value || placeholder}
+      {children ? children : (value || placeholder)}
     </span>);
 
 };
