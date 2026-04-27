@@ -10,17 +10,26 @@ import {
 '../ui/Select';
 import { FileText, Download, CheckCircle2 } from 'lucide-react';
 import { useAdminData } from '../../lib/adminData';
+import { SF4ReportDocument } from './SF4ReportDocument';
+
 export function ReportsView() {
   const { schoolYear, classrooms, sections } = useAdminData();
   const [generating, setGenerating] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showSF4, setShowSF4] = useState(false);
+  const [reportMonth, setReportMonth] = useState('JANUARY');
+
   const handleGenerate = (reportId: string) => {
     setGenerating(reportId);
     setTimeout(() => {
       setGenerating(null);
       setSuccess(reportId);
       setTimeout(() => setSuccess(null), 3000);
-    }, 1500);
+      
+      if (reportId === 'sf4') {
+        setShowSF4(true);
+      }
+    }, 1000);
   };
   const reports = [
   {
@@ -117,6 +126,24 @@ export function ReportsView() {
                     </Select>
                   </div>
                 </div>
+
+                {report.id === 'sf4' && (
+                  <div className="space-y-1.5 mt-4">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Report Month
+                    </label>
+                    <Select value={reportMonth} onValueChange={setReportMonth}>
+                      <SelectTrigger className="bg-muted/30">
+                        <SelectValue placeholder="Select Month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'].map(m => (
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               <Button
@@ -142,6 +169,13 @@ export function ReportsView() {
           )}
         </div>
       </div>
-    </div>);
 
+      {showSF4 && (
+        <SF4ReportDocument 
+          onClose={() => setShowSF4(false)} 
+          reportMonth={reportMonth} 
+          schoolYear={schoolYear?.name || '2024-2025'} 
+        />
+      )}
+    </div>);
 }
