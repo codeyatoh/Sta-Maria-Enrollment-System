@@ -22,6 +22,8 @@ import {
 import { Plus, Home, Users, Layout, Shield, Info, Edit, Trash2, MoreHorizontal, UserMinus } from 'lucide-react';
 import { useAdminData, Classroom, Section, Assignment } from '../../lib/adminData';
 import { cn } from '../ui/utils';
+import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 export function ClassroomsView() {
   const {
     classrooms,
@@ -63,54 +65,111 @@ export function ClassroomsView() {
   const [isEditSectionOpen, setIsEditSectionOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
 
-  const teachers = users.filter((u) => u.role === 'Teacher');
-  const handleAddClassroom = (e: React.FormEvent) => {
-    e.preventDefault();
-    addClassroom(newClassroom);
-    setIsAddClassroomOpen(false);
-    setNewClassroom({
-      roomName: '',
-      roomType: 'Lecture',
-      status: 'Available',
-      gradeLevel: ''
+  const [realClassrooms, setRealClassrooms] = useState<Classroom[]>([]);
+  const [realSections, setRealSections] = useState<Section[]>([]);
+  const [realAssignments, setRealAssignments] = useState<Assignment[]>([]);
+  const [realUsers, setRealUsers] = useState<any[]>([]); // Need to fetch users for the teachers dropdown
+  
+  // Fetch real data from Firestore
+  React.useEffect(() => {
+    const unsubClassrooms = onSnapshot(query(collection(db, 'classrooms')), (snap) => {
+      setRealClassrooms(snap.docs.map(d => ({ id: d.id, ...d.data() } as Classroom)));
     });
-  };
-  const handleAddSection = (e: React.FormEvent) => {
-    e.preventDefault();
-    addSection(newSection);
-    setIsAddSectionOpen(false);
-    setNewSection({
-      name: '',
-      classroomId: '',
-      gradeLevel: '',
-      status: 'Active'
+    
+    const unsubSections = onSnapshot(query(collection(db, 'sections')), (snap) => {
+      setRealSections(snap.docs.map(d => ({ id: d.id, ...d.data() } as Section)));
     });
+
+    const unsubAssignments = onSnapshot(query(collection(db, 'assignments')), (snap) => {
+      setRealAssignments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Assignment)));
+    });
+
+    const unsubUsers = onSnapshot(query(collection(db, 'users')), (snap) => {
+      setRealUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    return () => {
+      unsubClassrooms();
+      unsubSections();
+      unsubAssignments();
+      unsubUsers();
+    };
+  }, []);
+
+  const teachers = realUsers.filter((u) => u.role === 'teacher' || u.role === 'Teacher');
+
+  const handleAddClassroom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await addDoc(collection(db, 'classrooms'), {
+        ...newClassroom,
+        createdAt: new Date().toISOString()
+      });
+      setIsAddClassroomOpen(false);
+      setNewClassroom({ roomName: '', roomType: 'Lecture', status: 'Available', gradeLevel: '' });
+    } catch (err) {
+      console.error("Error adding classroom", err);
+    }
   };
-  const handleUpdateClassroom = (e: React.FormEvent) => {
+
+  const handleAddSection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await addDoc(collection(db, 'sections'), newSection);
+      setIsAddSectionOpen(false);
+      setNewSection({ name: '', classroomId: '', gradeLevel: '', status: 'Active' });
+    } catch (err) {
+      console.error("Error adding section", err);
+    }
+  };
+
+  const handleUpdateClassroom = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingClassroom) {
-      updateClassroom(editingClassroom.id, editingClassroom);
-      setIsEditClassroomOpen(false);
+      try {
+        const { id, ...dataToUpdate } = editingClassroom;
+        await updateDoc(doc(db, 'classrooms', id), dataToUpdate);
+        setIsEditClassroomOpen(false);
+      } catch (err) {
+        console.error("Error updating classroom", err);
+      }
     }
   };
 
-  const handleUpdateSection = (e: React.FormEvent) => {
+  const handleUpdateSection = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingSection) {
-      updateSection(editingSection.id, editingSection);
-      setIsEditSectionOpen(false);
+      try {
+        const { id, ...dataToUpdate } = editingSection;
+        await updateDoc(doc(db, 'sections', id), dataToUpdate);
+        setIsEditSectionOpen(false);
+      } catch (err) {
+        console.error("Error updating section", err);
+      }
     }
   };
 
-  const handleAssign = (e: React.FormEvent) => {
+  const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
-    addAssignment(newAssign);
-    setIsAssignOpen(false);
-    setNewAssign({
-      teacherId: '',
-      classroomId: '',
-      sectionId: ''
-    });
+    try {
+      await addDoc(collection(db, 'assignments'), newAssign);
+      setIsAssignOpen(false);
+      setNewAssign({ teacherId: '', classroomId: '', sectionId: '' });
+    } catch (err) {
+      console.error("Error assigning teacher", err);
+    }
+  };
+
+  const deleteClassroomFromDb = async (id: string) => {
+    try { await deleteDoc(doc(db, 'classrooms', id)); } catch(e) { console.error(e); }
+  };
+
+  const deleteSectionFromDb = async (id: string) => {
+    try { await deleteDoc(doc(db, 'sections', id)); } catch(e) { console.error(e); }
+  };
+
+  const deleteAssignmentFromDb = async (id: string) => {
+    try { await deleteDoc(doc(db, 'assignments', id)); } catch(e) { console.error(e); }
   };
   return (
     <div className="flex flex-col h-full">
@@ -172,7 +231,7 @@ export function ClassroomsView() {
                       <SelectValue placeholder="Select classroom" />
                     </SelectTrigger>
                     <SelectContent>
-                      {classrooms.map((c) =>
+                      {realClassrooms.map((c) =>
                         <SelectItem key={c.id} value={c.id}>
                           {c.roomName}
                         </SelectItem>
@@ -196,7 +255,7 @@ export function ClassroomsView() {
                       <SelectValue placeholder="Select section" />
                     </SelectTrigger>
                     <SelectContent>
-                      {sections.
+                      {realSections.
                       filter((s) => s.classroomId === newAssign.classroomId).
                       map((s) =>
                       <SelectItem key={s.id} value={s.id}>
@@ -287,11 +346,11 @@ export function ClassroomsView() {
                       <SelectValue placeholder="Select classroom" />
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px] overflow-y-auto">
-                      {classrooms
-                        .filter(c => (!newSection.gradeLevel || c.gradeLevel === newSection.gradeLevel) && c.status === 'Available')
+                      {realClassrooms
+                        .filter(c => c.status === 'Available')
                         .map((c) =>
                         <SelectItem key={c.id} value={c.id}>
-                          {c.roomName || 'Unnamed Room'}
+                          {c.roomName || 'Unnamed Room'} (Grade {c.gradeLevel})
                         </SelectItem>
                       )}
                     </SelectContent>
@@ -514,7 +573,7 @@ export function ClassroomsView() {
                       onValueChange={(v) => setEditingSection({ ...editingSection, classroomId: v })}>
                       <SelectTrigger><SelectValue placeholder="Select Classroom" /></SelectTrigger>
                       <SelectContent>
-                        {classrooms.map(c => (
+                        {realClassrooms.map(c => (
                           <SelectItem key={c.id} value={c.id}>{c.roomName}</SelectItem>
                         ))}
                       </SelectContent>
@@ -533,8 +592,8 @@ export function ClassroomsView() {
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-          {classrooms.map((classroom) => {
-            const classSections = sections.filter(
+          {realClassrooms.map((classroom) => {
+            const classSections = realSections.filter(
               (s) => s.classroomId === classroom.id
             );
             return (
@@ -570,7 +629,7 @@ export function ClassroomsView() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50"
-                        onClick={() => deleteClassroom(classroom.id)}
+                        onClick={() => deleteClassroomFromDb(classroom.id)}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
@@ -613,7 +672,7 @@ export function ClassroomsView() {
                     </p> :
 
                   classSections.map((section) => {
-                    const assignment = assignments.find(
+                    const assignment = realAssignments.find(
                       (a) => a.sectionId === section.id
                     );
                     const teacher = assignment ?
@@ -650,7 +709,7 @@ export function ClassroomsView() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50"
-                                onClick={() => deleteSection(section.id)}
+                                onClick={() => deleteSectionFromDb(section.id)}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </Button>
@@ -668,7 +727,7 @@ export function ClassroomsView() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-6 w-6 rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 opacity-0 group-hover:opacity-100"
-                                  onClick={() => assignment && deleteAssignment(assignment.id)}
+                                  onClick={() => assignment && deleteAssignmentFromDb(assignment.id)}
                                   title="Remove Assignment"
                                 >
                                   <UserMinus className="w-3 h-3" />
