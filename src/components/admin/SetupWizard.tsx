@@ -22,7 +22,7 @@ export function SetupWizard() {
   const [classrooms, setLocalClassrooms] = useState([
     { roomName: 'Room 101', roomType: 'Lecture' }
   ]);
-  const [sections, setLocalSections] = useState([
+  const [sections, setLocalSections] = useState<{ name: string; classroomIndex?: number }[]>([
     { name: 'Section A' }
   ]);
   const [subjects, setLocalSubjects] = useState([
