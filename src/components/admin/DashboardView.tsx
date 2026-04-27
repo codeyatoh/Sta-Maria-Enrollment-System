@@ -1,0 +1,199 @@
+import React from 'react';
+import { Card } from '../ui/Card';
+import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
+import {
+  Users,
+  GraduationCap,
+  Heart,
+  Home } from
+'lucide-react';
+import { useAdminData } from '../../lib/adminData';
+export function DashboardView() {
+  const { users, classrooms, setSetupComplete } = useAdminData();
+  const activeTeachers = users.filter(
+    (u) => u.role === 'Teacher' && u.status === 'Active'
+  ).length;
+  const enrolledParents = users.filter((u) => u.role === 'Parent').length;
+  const stats = [
+  {
+    label: 'Total Students',
+    value: '1,234',
+    change: '+20.1% from last month',
+    icon: Users,
+    positive: true
+  },
+  {
+    label: 'Active Teachers',
+    value: activeTeachers.toString(),
+    change: '+2 new hires this month',
+    icon: GraduationCap,
+    positive: true
+  },
+  {
+    label: 'Enrolled Parents',
+    value: enrolledParents.toString(),
+    change: '+15% from last month',
+    icon: Heart,
+    positive: true
+  },
+  {
+    label: 'Active Classrooms',
+    value: classrooms.length.toString(),
+    change: '2 pending assignments',
+    icon: Home,
+    positive: false
+  }];
+
+  const recentActivity = [
+  {
+    initials: 'MS',
+    name: 'Maria Santos',
+    detail: 'New teacher added',
+    value: 'Active',
+    color: 'bg-green-100 text-green-700'
+  },
+  {
+    initials: 'JD',
+    name: 'Juan Dela Cruz',
+    detail: 'Teacher assigned to Grade 1-A',
+    value: 'Completed',
+    color: 'bg-blue-100 text-blue-700'
+  },
+  {
+    initials: 'AG',
+    name: 'Ana Garcia',
+    detail: 'Parent enrollment pending',
+    value: 'Pending',
+    color: 'bg-orange-100 text-orange-700'
+  },
+  {
+    initials: 'PR',
+    name: 'Pedro Reyes',
+    detail: 'New teacher added',
+    value: 'Active',
+    color: 'bg-green-100 text-green-700'
+  }];
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Page Title */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Dashboard
+          </h2>
+          <Button
+            variant="outline"
+            onClick={() => setSetupComplete(false)}
+            className="w-full sm:w-auto">
+            
+            Rerun Setup
+          </Button>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat, i) =>
+          <Card key={i} className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-muted-foreground">
+                  {stat.label}
+                </p>
+                <stat.icon className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold">{stat.value}</p>
+                <p
+                className={`text-xs ${stat.positive ? 'text-green-600' : 'text-muted-foreground'}`}>
+                
+                  {stat.change}
+                </p>
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+          <Card className="lg:col-span-4 p-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold">Overview</h3>
+              <p className="text-sm text-muted-foreground">
+                Total enrollments over the last 6 months
+              </p>
+            </div>
+            <div className="h-[300px] w-full">
+              <svg
+                viewBox="0 0 1000 250"
+                preserveAspectRatio="none"
+                className="w-full h-full">
+                
+                <defs>
+                  <linearGradient id="gradient1" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="0%"
+                      stopColor="rgb(234 88 12)"
+                      stopOpacity="0.2" />
+                    
+                    <stop
+                      offset="100%"
+                      stopColor="rgb(234 88 12)"
+                      stopOpacity="0" />
+                    
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M0,180 C200,250 300,80 500,160 C700,240 800,80 1000,120 L1000,250 L0,250 Z"
+                  fill="url(#gradient1)" />
+                
+                <path
+                  d="M0,180 C200,250 300,80 500,160 C700,240 800,80 1000,120"
+                  fill="none"
+                  stroke="rgb(234 88 12)"
+                  strokeWidth="2"
+                  opacity="0.8" />
+                
+              </svg>
+              <div className="flex justify-between text-xs text-muted-foreground mt-2 px-2">
+                <span>Jan</span>
+                <span>Feb</span>
+                <span>Mar</span>
+                <span>Apr</span>
+                <span>May</span>
+                <span>Jun</span>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="lg:col-span-3 p-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold">Recent Activity</h3>
+              <p className="text-sm text-muted-foreground">
+                You made 265 actions this month.
+              </p>
+            </div>
+            <div className="space-y-4">
+              {recentActivity.map((item, i) =>
+              <div key={i} className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-semibold text-sm">
+                    {item.initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{item.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {item.detail}
+                    </p>
+                  </div>
+                  <Badge className={`${item.color} border-none text-xs`}>
+                    {item.value}
+                  </Badge>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>);
+
+}
