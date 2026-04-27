@@ -28,10 +28,33 @@ import {
 '../ui/Select';
 import { Badge } from '../ui/Badge';
 import { Plus, BookOpen, GraduationCap, Layers, Edit, Trash2, Eye, Calendar, Filter } from 'lucide-react';
-import { useAdminData, Subject } from '../../lib/adminData';
+import { Subject } from '../../lib/adminData';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { useEffect } from 'react';
 import { cn } from '../ui/utils';
 export function SubjectsView() {
-  const { subjects, addSubject, updateSubject, deleteSubject } = useAdminData();
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(query(collection(db, 'subjects')), (snapshot) => {
+      const subjectData: Subject[] = [];
+      snapshot.forEach((d) => {
+        subjectData.push({ id: d.id, ...d.data() } as Subject);
+      });
+      setSubjects(subjectData);
+    });
+    return () => unsub();
+  }, []);
+
+  const handleDeleteSubject = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'subjects', id));
+    } catch (error) {
+      console.error("Error deleting subject:", error);
+    }
+  };
   const [isOpen, setIsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -47,25 +70,44 @@ export function SubjectsView() {
     status: 'Active' as 'Active' | 'Inactive',
     academicYear: '2024-2025'
   });
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    addSubject(newSubject);
-    setIsOpen(false);
-    setNewSubject({
-      name: '',
-      code: '',
-      gradeLevel: '1',
-      units: 3,
-      status: 'Active',
-      academicYear: '2024-2025'
-    });
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      await addDoc(collection(db, 'subjects'), {
+        ...newSubject,
+        createdAt: serverTimestamp()
+      });
+      setIsOpen(false);
+      setNewSubject({
+        name: '',
+        code: '',
+        gradeLevel: '1',
+        units: 3,
+        status: 'Active',
+        academicYear: '2024-2025'
+      });
+    } catch (error) {
+      console.error("Error adding subject: ", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleUpdate = (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingSubject) {
-      updateSubject(editingSubject.id, editingSubject);
-      setIsEditOpen(false);
+    if (editingSubject && !isSaving) {
+      setIsSaving(true);
+      try {
+        const { id, ...dataToUpdate } = editingSubject;
+        await updateDoc(doc(db, 'subjects', id), dataToUpdate);
+        setIsEditOpen(false);
+      } catch (error) {
+        console.error("Error updating subject: ", error);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
   return (
@@ -284,7 +326,7 @@ export function SubjectsView() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-slate-500 text-sm">
-                        {subject.createdAt ? new Date(subject.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                        {subject.createdAt ? (subject.createdAt as any)?.toDate ? (subject.createdAt as any).toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date(subject.createdAt as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <div className="flex items-center justify-end gap-1">
@@ -308,7 +350,7 @@ export function SubjectsView() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
-                            onClick={() => deleteSubject(subject.id)}
+                            onClick={() => handleDeleteSubject(subject.id)}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -465,7 +507,7 @@ export function SubjectsView() {
                 <div className="p-3 rounded-xl border border-slate-100">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Created At</p>
                   <p className="font-bold text-slate-700">
-                    {viewingSubject.createdAt ? new Date(viewingSubject.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                    {viewingSubject.createdAt ? (viewingSubject.createdAt as any)?.toDate ? (viewingSubject.createdAt as any).toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date(viewingSubject.createdAt as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                   </p>
                 </div>
               </div>
