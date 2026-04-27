@@ -53,35 +53,34 @@ export function TeacherDashboardView() {
     positive: true
   }];
 
-  const recentActivity = [
-  {
-    initials: 'JD',
-    name: 'Juan Dela Cruz',
-    detail: 'Grade updated - Math',
-    value: '85',
-    color: 'bg-blue-100 text-blue-700'
-  },
-  {
-    initials: 'MS',
-    name: 'Maria Santos',
-    detail: 'Attendance - Present',
-    value: 'Today',
-    color: 'bg-green-100 text-green-700'
-  },
-  {
-    initials: 'PG',
-    name: 'Pedro Garcia',
-    detail: 'Absent - 5 days',
-    value: 'Alert',
-    color: 'bg-red-100 text-red-700'
-  },
-  {
-    initials: 'AR',
-    name: 'Ana Reyes',
-    detail: 'BMI recorded',
-    value: 'Normal',
-    color: 'bg-green-100 text-green-700'
-  }];
+  const recentActivity: any[] = [];
+  
+  pending.forEach(s => {
+    recentActivity.push({
+      id: s.id + '-pending',
+      initials: s.firstName[0] + s.lastName[0],
+      name: `${s.firstName} ${s.lastName}`,
+      detail: 'Enrollment pending approval',
+      value: 'Pending',
+      color: 'bg-orange-100 text-orange-700'
+    });
+  });
+
+  todayAttendance.slice(0, 4).forEach(a => {
+    const s = students.find(st => st.id === a.studentId);
+    if(s) {
+      recentActivity.push({
+        id: a.studentId + '-att',
+        initials: s.firstName[0] + s.lastName[0],
+        name: `${s.firstName} ${s.lastName}`,
+        detail: `Attendance recorded - ${a.status}`,
+        value: 'Today',
+        color: a.status === 'Present' ? 'bg-green-100 text-green-700' : a.status === 'Late' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+      });
+    }
+  });
+
+  const displayActivities = recentActivity.slice(0, 5);
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -121,11 +120,17 @@ export function TeacherDashboardView() {
                 Class attendance over the last 30 days
               </p>
             </div>
-            <div className="h-[300px] w-full">
+            <div className="h-[300px] w-full relative">
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px] rounded-lg">
+                <Badge variant="outline" className="mb-2 bg-background">System Initialized</Badge>
+                <p className="text-sm font-medium text-slate-600 text-center max-w-[200px]">
+                  Historical attendance data is not yet available for SY 2026-2027.
+                </p>
+              </div>
               <svg
                 viewBox="0 0 1000 250"
                 preserveAspectRatio="none"
-                className="w-full h-full">
+                className="w-full h-full opacity-30 grayscale">
                 
                 <defs>
                   <linearGradient id="tg1" x1="0" y1="0" x2="0" y2="1">
@@ -170,20 +175,26 @@ export function TeacherDashboardView() {
               </p>
             </div>
             <div className="space-y-4">
-              {recentActivity.map((item, i) =>
-              <div key={i} className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-semibold text-sm">
-                    {item.initials}
+              {displayActivities.length > 0 ? (
+                displayActivities.map((item, i) =>
+                <div key={item.id || i} className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-semibold text-sm shrink-0">
+                      {item.initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {item.detail}
+                      </p>
+                    </div>
+                    <Badge className={`${item.color} border-none text-[10px] shrink-0`}>
+                      {item.value}
+                    </Badge>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{item.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {item.detail}
-                    </p>
-                  </div>
-                  <Badge className={`${item.color} border-none text-xs`}>
-                    {item.value}
-                  </Badge>
+                )
+              ) : (
+                <div className="text-center text-sm text-muted-foreground py-8">
+                  No classroom activities to show yet.
                 </div>
               )}
             </div>
