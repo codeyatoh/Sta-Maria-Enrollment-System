@@ -24,11 +24,21 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
+import { useAuth } from '../../lib/AuthContext';
+
 export function SignUpPage() {
   const navigate = useNavigate();
+  const { user, role } = useAuth();
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  React.useEffect(() => {
+    if (user && role) {
+      navigate(`/${role}`);
+    }
+  }, [user, role, navigate]);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -102,7 +112,21 @@ export function SignUpPage() {
       navigate('/parent');
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Failed to create account. Please try again.");
+      let message = "Failed to create account. Please try again.";
+      
+      if (err.code === 'auth/email-already-in-use') {
+        message = "This email is already registered. Please use another or sign in.";
+      } else if (err.code === 'auth/invalid-email') {
+        message = "Invalid email address format.";
+      } else if (err.code === 'auth/weak-password') {
+        message = "Password is too weak. Please use at least 6 characters.";
+      } else if (err.code === 'auth/network-request-failed') {
+        message = "Connection error. Please check your internet.";
+      } else if (err.message) {
+        message = err.message;
+      }
+      
+      setError(message);
     } finally {
       setIsRegistering(false);
     }
@@ -289,7 +313,7 @@ export function SignUpPage() {
                   <div className="relative">
                     <Input
                       id="confirmPassword"
-                      type={showPassword ? "text" : "password"}
+                      type={showConfirmPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
@@ -297,9 +321,9 @@ export function SignUpPage() {
                       className="h-10 pr-10" />
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none">
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
