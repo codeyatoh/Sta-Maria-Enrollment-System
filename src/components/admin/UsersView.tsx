@@ -28,17 +28,15 @@ import {
   SelectTrigger,
   SelectValue } from
 '../ui/Select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
+
 import {
   EyeOff,
   Search,
   Filter,
   Edit,
   Eye,
-  Eye as ViewIcon,
-  ChevronDown,
+  ViewIcon,
   Plus,
-  CheckCircle2,
   CircleDashed,
   Trash2,
   Users,
@@ -46,7 +44,7 @@ import {
   UserCheck,
   Heart
 } from 'lucide-react';
-import { initializeApp, getApp, getApps } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, collection, onSnapshot, query } from 'firebase/firestore';
 import { db, firebaseConfig } from '../../lib/firebase';
@@ -56,7 +54,7 @@ import { useAdminData, User } from '../../lib/adminData';
 const secondaryApp = getApps().find(app => app.name === 'Secondary') || initializeApp(firebaseConfig, 'Secondary');
 const secondaryAuth = getAuth(secondaryApp);
 export function UsersView() {
-  const { users, addUser, updateUser, deleteUser, setUsers } = useAdminData() as any; // Temporary cast to use setUsers if not in context
+  const { addUser, updateUser, deleteUser } = useAdminData() as { addUser: (u: User) => void, updateUser: (id: string, u: User) => void, deleteUser: (id: string) => void };
   const [realUsers, setRealUsers] = useState<User[]>([]);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -175,14 +173,15 @@ export function UsersView() {
         status: 'Active'
       });
       
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
+      const error = err as Error & { code?: string };
       let message = "Failed to create account.";
-      if (err.code === 'auth/email-already-in-use') {
+      if (error.code === 'auth/email-already-in-use') {
         message = "This email address is already in use.";
-      } else if (err.code === 'auth/invalid-email') {
+      } else if (error.code === 'auth/invalid-email') {
         message = "Invalid email address format.";
-      } else if (err.code === 'auth/weak-password') {
+      } else if (error.code === 'auth/weak-password') {
         message = "Password must be at least 6 characters.";
       }
       setError(message);
@@ -566,7 +565,7 @@ export function UsersView() {
                   <Label>Gender</Label>
                   <Select
                     value={selectedUser.gender}
-                    onValueChange={(v: any) => setSelectedUser({ ...selectedUser, gender: v })}>
+                    onValueChange={(v: string) => setSelectedUser({ ...selectedUser, gender: v as 'Male' | 'Female' | 'Other' })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Male">Male</SelectItem>
@@ -579,7 +578,7 @@ export function UsersView() {
                   <Label>Status</Label>
                   <Select
                     value={selectedUser.status}
-                    onValueChange={(v: any) => setSelectedUser({ ...selectedUser, status: v })}>
+                    onValueChange={(v: string) => setSelectedUser({ ...selectedUser, status: v as 'Active' | 'Pending' })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Active">Active</SelectItem>
