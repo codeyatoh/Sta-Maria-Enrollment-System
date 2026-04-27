@@ -7,9 +7,6 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import {
-  Users,
-  BookOpen,
-  FileText,
   Loader2,
   Eye,
   EyeOff
@@ -40,10 +37,7 @@ export function LoginPage() {
     }
   }, [user, role, navigate]);
 
-  const handleQuickLogin = async (role: 'admin' | 'teacher' | 'parent') => {
-    setEmail(`${role}@school.edu`);
-    setPassword('password123'); // Default password for demo
-  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +80,7 @@ export function LoginPage() {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
             backgroundImage:
-            'url(https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=1000)'
+            'url(https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?q=80&w=2000&auto=format&fit=crop)'
           }} />
         <div className="absolute inset-0 bg-zinc-900/70" />
         <div className="relative z-20 flex items-center gap-3 font-bold text-xl tracking-tight">
@@ -193,43 +187,7 @@ export function LoginPage() {
               </div>
             </form>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with demo
-                </span>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <Button
-                variant="outline"
-                type="button"
-                className="text-xs w-full"
-                onClick={() => handleQuickLogin('admin')}>
-                <Users className="mr-2 h-4 w-4" />
-                Admin
-              </Button>
-              <Button
-                variant="outline"
-                type="button"
-                className="text-xs w-full"
-                onClick={() => handleQuickLogin('teacher')}>
-                <BookOpen className="mr-2 h-4 w-4" />
-                Teacher
-              </Button>
-              <Button
-                variant="outline"
-                type="button"
-                className="text-xs w-full"
-                onClick={() => handleQuickLogin('parent')}>
-                <FileText className="mr-2 h-4 w-4" />
-                Parent
-              </Button>
-            </div>
           </div>
 
           <p className="px-8 text-center text-sm text-muted-foreground">
