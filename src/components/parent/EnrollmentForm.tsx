@@ -25,6 +25,10 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
     gender: '',
     lrn: '',
     gradeLevel: '',
+    isReturning: false, // Balik-Aral
+    lastGradeLevel: '',
+    lastSchoolAttended: '',
+    lastSchoolYear: '',
     address: {
       street: '',
       barangay: '',
@@ -37,7 +41,12 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
       weight: '',
       bloodType: '',
       allergies: '',
-      conditions: '',
+      hasDiagnosis: false,
+      diagnoses: [] as string[],
+      hasManifestations: false,
+      manifestations: [] as string[],
+      hasPwdId: false,
+      pwdId: '',
       emergencyContact: '',
       emergencyPhone: ''
     },
@@ -45,7 +54,9 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
       motherTongue: '',
       religion: '',
       isIndigenous: false,
-      indigenousGroup: ''
+      indigenousGroup: '',
+      is4ps: false,
+      learningMode: 'Blended' as 'Modular Print' | 'Digital' | 'Blended'
     }
   });
   const handleSubmit = () => {
@@ -195,10 +206,10 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                         <SelectTrigger>
                           <SelectValue placeholder="Select grade" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">Grade 1</SelectItem>
-                          <SelectItem value="2">Grade 2</SelectItem>
-                          <SelectItem value="3">Grade 3</SelectItem>
+                        <SelectContent className="max-h-[200px] overflow-y-auto">
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
+                            <SelectItem key={g} value={g.toString()}>Grade {g}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -212,8 +223,52 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                         lrn: e.target.value
                       })
                       }
-                      placeholder="Optional for new students" />
-                    
+                      placeholder="Optional for new students (Must match PSA Certificate)" />
+                    </div>
+
+                    <div className="space-y-4 sm:col-span-2 p-4 border border-border rounded-lg bg-muted/30">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="returning"
+                          checked={formData.isReturning}
+                          onCheckedChange={(c) => setFormData({ ...formData, isReturning: !!c })}
+                        />
+                        <Label htmlFor="returning" className="font-bold text-slate-700">
+                          Balik-Aral (Returning Student)
+                        </Label>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground pl-6">
+                        Check this if the student is returning to school after dropping out in previous years.
+                      </p>
+
+                      {formData.isReturning && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                          <div className="space-y-2">
+                            <Label>Last Grade Level Completed</Label>
+                            <Input
+                              value={formData.lastGradeLevel}
+                              onChange={(e) => setFormData({ ...formData, lastGradeLevel: e.target.value })}
+                              placeholder="e.g. Grade 5"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Last School Attended</Label>
+                            <Input
+                              value={formData.lastSchoolAttended}
+                              onChange={(e) => setFormData({ ...formData, lastSchoolAttended: e.target.value })}
+                              placeholder="Name of previous school"
+                            />
+                          </div>
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label>Last School Year Attended</Label>
+                            <Input
+                              value={formData.lastSchoolYear}
+                              onChange={(e) => setFormData({ ...formData, lastSchoolYear: e.target.value })}
+                              placeholder="e.g. 2022-2023"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex justify-end pt-6 mt-6 border-t border-border">
@@ -455,7 +510,118 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                         }
                       })
                       } />
-                    
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label>Allergies (if any)</Label>
+                      <Input
+                        value={formData.medical.allergies}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            medical: {
+                              ...formData.medical,
+                              allergies: e.target.value
+                            }
+                          })
+                        }
+                        placeholder="e.g. Peanuts, Penicillin (Leave blank if none)"
+                      />
+                    </div>
+
+                    <div className="space-y-4 sm:col-span-2 p-4 border border-border rounded-lg bg-blue-50/30">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="diagnosis"
+                          checked={formData.medical.hasDiagnosis}
+                          onCheckedChange={(c) => setFormData({ ...formData, medical: { ...formData.medical, hasDiagnosis: !!c } })}
+                        />
+                        <Label htmlFor="diagnosis" className="font-bold text-blue-900">
+                          Licensed Diagnosis
+                        </Label>
+                      </div>
+                      <p className="text-[10px] text-blue-700/70 pl-6">
+                        Check if the child has a medical certificate for specific conditions.
+                      </p>
+
+                      {formData.medical.hasDiagnosis && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6 pt-2">
+                          {['ADHD', 'Autism', 'Hearing Impairment', 'Learning Disability', 'Visual Impairment'].map((d) => (
+                            <div key={d} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`diag-${d}`}
+                                checked={formData.medical.diagnoses.includes(d)}
+                                onCheckedChange={(c) => {
+                                  const newDiags = !!c 
+                                    ? [...formData.medical.diagnoses, d]
+                                    : formData.medical.diagnoses.filter(x => x !== d);
+                                  setFormData({ ...formData, medical: { ...formData.medical, diagnoses: newDiags } });
+                                }}
+                              />
+                              <Label htmlFor={`diag-${d}`} className="text-xs">{d}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-4 sm:col-span-2 p-4 border border-border rounded-lg bg-orange-50/30">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="manifestations"
+                          checked={formData.medical.hasManifestations}
+                          onCheckedChange={(c) => setFormData({ ...formData, medical: { ...formData.medical, hasManifestations: !!c } })}
+                        />
+                        <Label htmlFor="manifestations" className="font-bold text-orange-900">
+                          With Manifestations
+                        </Label>
+                      </div>
+                      <p className="text-[10px] text-orange-700/70 pl-6">
+                        Difficulties in seeing, hearing, or communicating (without formal diagnosis).
+                      </p>
+
+                      {formData.medical.hasManifestations && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6 pt-2">
+                          {['Seeing Difficulty', 'Hearing Difficulty', 'Communicating Difficulty', 'Mobility Difficulty'].map((m) => (
+                            <div key={m} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`man-${m}`}
+                                checked={formData.medical.manifestations.includes(m)}
+                                onCheckedChange={(c) => {
+                                  const newMans = !!c 
+                                    ? [...formData.medical.manifestations, m]
+                                    : formData.medical.manifestations.filter(x => x !== m);
+                                  setFormData({ ...formData, medical: { ...formData.medical, manifestations: newMans } });
+                                }}
+                              />
+                              <Label htmlFor={`man-${m}`} className="text-xs">{m}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-4 sm:col-span-2 p-4 border border-border rounded-lg bg-muted/30">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="pwd"
+                          checked={formData.medical.hasPwdId}
+                          onCheckedChange={(c) => setFormData({ ...formData, medical: { ...formData.medical, hasPwdId: !!c } })}
+                        />
+                        <Label htmlFor="pwd" className="font-bold">
+                          Has Official PWD ID?
+                        </Label>
+                      </div>
+                      {formData.medical.hasPwdId && (
+                        <div className="pl-6 pt-2">
+                          <Label className="text-xs mb-1 block">PWD ID Number</Label>
+                          <Input
+                            value={formData.medical.pwdId}
+                            onChange={(e) => setFormData({ ...formData, medical: { ...formData.medical, pwdId: e.target.value } })}
+                            placeholder="Enter PWD ID number"
+                            className="h-8"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 pt-6 mt-6 border-t border-border">
@@ -542,27 +708,62 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                         })
                         } />
                       
-                        <Label htmlFor="indigenous" className="font-normal">
+                        <Label htmlFor="indigenous" className="font-bold">
                           Belongs to an Indigenous Peoples (IP) Community
                         </Label>
                       </div>
                       {formData.additional.isIndigenous &&
-                    <div className="space-y-2 pl-6">
+                        <div className="space-y-2 pl-6">
                           <Label>Specify IP Group</Label>
                           <Input
-                        value={formData.additional.indigenousGroup}
-                        onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          additional: {
-                            ...formData.additional,
-                            indigenousGroup: e.target.value
-                          }
-                        })
-                        } />
-                      
+                            value={formData.additional.indigenousGroup}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                additional: {
+                                  ...formData.additional,
+                                  indigenousGroup: e.target.value
+                                }
+                              })
+                            } />
                         </div>
-                    }
+                      }
+                    </div>
+
+                    <div className="space-y-4 sm:col-span-2 p-4 border border-border rounded-lg bg-green-50/30">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="4ps"
+                          checked={formData.additional.is4ps}
+                          onCheckedChange={(c) => setFormData({ ...formData, additional: { ...formData.additional, is4ps: !!c } })}
+                        />
+                        <Label htmlFor="4ps" className="font-bold text-green-900">
+                          4Ps Beneficiary?
+                        </Label>
+                      </div>
+                      <p className="text-[10px] text-green-700/70 pl-6">
+                        Check if the family is currently a recipient of the Pantawid Pamilyang Pilipino Program.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label className="font-bold">Distance Learning Preference</Label>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Choose how you prefer your child to learn if they cannot attend physical classes.
+                      </p>
+                      <Select
+                        value={formData.additional.learningMode}
+                        onValueChange={(v: any) => setFormData({ ...formData, additional: { ...formData.additional, learningMode: v } })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select learning mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Modular Print">Modular Print</SelectItem>
+                          <SelectItem value="Digital">Digital</SelectItem>
+                          <SelectItem value="Blended">Blended (Physical + Digital)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 pt-6 mt-6 border-t border-border">
