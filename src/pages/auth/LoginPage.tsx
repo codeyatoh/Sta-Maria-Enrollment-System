@@ -58,9 +58,10 @@ export function LoginPage() {
       } else {
         setError("User role not found. Please contact administrator.");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "Failed to sign in. Please check your credentials.");
+      const error = err as Error & { message?: string };
+      setError(error.message || "Failed to sign in. Please check your credentials.");
     } finally {
       setIsLoggingIn(false);
     }
