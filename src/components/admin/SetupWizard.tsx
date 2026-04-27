@@ -5,69 +5,84 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
-import { useAdminData } from '../../lib/adminData';
+import { collection, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+
 export function SetupWizard() {
-  const {
-    setSchoolYear,
-    addClassroom,
-    addSection,
-    addSubject,
-    setSetupComplete
-  } = useAdminData();
+  const { setSetupComplete } = useAdminData();
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   // Local state for wizard
   const [sy, setSy] = useState({
-    name: '2024-2025',
-    startDate: '',
-    endDate: ''
+    startYear: '2025',
+    endYear: '2026'
   });
   const [classrooms, setLocalClassrooms] = useState([
-  {
-    name: 'Grade 1',
-    gradeLevel: '1'
-  }]
-  );
+    { roomName: 'Room 101', roomType: 'Lecture' }
+  ]);
   const [sections, setLocalSections] = useState([
-  {
-    name: 'Section A',
-    classroomIndex: 0
-  }]
-  );
+    { name: 'Section A' }
+  ]);
   const [subjects, setLocalSubjects] = useState([
-  {
-    name: 'Mathematics',
-    code: 'MATH101'
-  }]
-  );
-  const handleComplete = () => {
-    // Save all to context
-    setSchoolYear({
-      id: 'sy1',
-      name: sy.name,
-      startDate: sy.startDate,
-      endDate: sy.endDate,
-      isActive: true
-    });
-    // In a real app we'd map IDs carefully, here we just add them sequentially
-    classrooms.forEach((c) =>
-    addClassroom({
-      name: c.name,
-      gradeLevel: c.gradeLevel
-    })
-    );
-    sections.forEach((s) =>
-    addSection({
-      name: s.name,
-      classroomId: '1'
-    })
-    ); // Mocking classroomId for simplicity in wizard
-    subjects.forEach((s) =>
-    addSubject({
-      name: s.name,
-      code: s.code
-    })
-    );
-    setSetupComplete(true);
+    { name: 'Mathematics', code: 'MATH101', units: 3, gradeLevel: '1' }
+  ]);
+
+  const handleComplete = async () => {
+    setIsSubmitting(true);
+    try {
+      const academicYearStr = `${sy.startYear}-${sy.endYear}`;
+      
+      // Save settings
+      await setDoc(doc(db, 'settings', 'system'), {
+        currentAcademicYear: academicYearStr,
+        setupComplete: true,
+        updatedAt: serverTimestamp()
+      });
+
+      // Save classrooms
+      const classroomPromises = classrooms.map(c => 
+        addDoc(collection(db, 'classrooms'), {
+          roomName: c.roomName,
+          roomType: c.roomType,
+          status: 'Available',
+          createdAt: serverTimestamp()
+        })
+      );
+      const classroomRefs = await Promise.all(classroomPromises);
+      const firstClassroomId = classroomRefs.length > 0 ? classroomRefs[0].id : 'unassigned';
+
+      // Save sections
+      const sectionPromises = sections.map(s => 
+        addDoc(collection(db, 'sections'), {
+          name: s.name,
+          classroomId: firstClassroomId,
+          status: 'Active',
+          createdAt: serverTimestamp()
+        })
+      );
+      await Promise.all(sectionPromises);
+
+      // Save subjects
+      const subjectPromises = subjects.map(s => 
+        addDoc(collection(db, 'subjects'), {
+          name: s.name,
+          code: s.code,
+          gradeLevel: s.gradeLevel,
+          units: s.units,
+          academicYear: academicYearStr,
+          status: 'Active',
+          createdAt: serverTimestamp()
+        })
+      );
+      await Promise.all(subjectPromises);
+
+      setSetupComplete(true);
+    } catch (error) {
+      console.error("Setup Error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   const slideVariants = {
     enter: (direction: number) => ({
@@ -135,45 +150,32 @@ export function SetupWizard() {
                   Initialize the foundational academic year.
                 </p>
                 <div className="space-y-4 flex-1">
-                  <div className="space-y-2">
-                    <Label>School Year Name</Label>
-                    <Input
-                    value={sy.name}
-                    onChange={(e) =>
-                    setSy({
-                      ...sy,
-                      name: e.target.value
-                    })
-                    }
-                    placeholder="e.g. 2024-2025" />
-                  
-                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Start Date</Label>
+                      <Label>Start Year</Label>
                       <Input
-                      type="date"
-                      value={sy.startDate}
+                      type="number"
+                      value={sy.startYear}
                       onChange={(e) =>
                       setSy({
                         ...sy,
-                        startDate: e.target.value
+                        startYear: e.target.value
                       })
-                      } />
-                    
+                      }
+                      placeholder="e.g. 2025" />
                     </div>
                     <div className="space-y-2">
-                      <Label>End Date</Label>
+                      <Label>End Year</Label>
                       <Input
-                      type="date"
-                      value={sy.endDate}
+                      type="number"
+                      value={sy.endYear}
                       onChange={(e) =>
                       setSy({
                         ...sy,
-                        endDate: e.target.value
+                        endYear: e.target.value
                       })
-                      } />
-                    
+                      }
+                      placeholder="e.g. 2026" />
                     </div>
                   </div>
                 </div>
@@ -214,26 +216,30 @@ export function SetupWizard() {
                   className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border border-border rounded-lg bg-muted/30">
                   
                       <div className="space-y-2">
-                        <Label>Classroom Name</Label>
+                        <Label>Room Name</Label>
                         <Input
-                      value={c.name}
+                      value={c.roomName}
                       onChange={(e) => {
                         const newC = [...classrooms];
-                        newC[i].name = e.target.value;
+                        newC[i].roomName = e.target.value;
                         setLocalClassrooms(newC);
                       }} />
-                    
                       </div>
                       <div className="space-y-2">
-                        <Label>Grade Level</Label>
-                        <Input
-                      value={c.gradeLevel}
-                      onChange={(e) => {
-                        const newC = [...classrooms];
-                        newC[i].gradeLevel = e.target.value;
-                        setLocalClassrooms(newC);
-                      }} />
-                    
+                        <Label>Room Type</Label>
+                        <select
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          value={c.roomType}
+                          onChange={(e) => {
+                            const newC = [...classrooms];
+                            newC[i].roomType = e.target.value;
+                            setLocalClassrooms(newC);
+                          }}
+                        >
+                          <option value="Lecture">Lecture</option>
+                          <option value="Laboratory">Laboratory</option>
+                          <option value="Multipurpose">Multipurpose</option>
+                        </select>
                       </div>
                     </div>
                 )}
@@ -244,8 +250,8 @@ export function SetupWizard() {
                   setLocalClassrooms([
                   ...classrooms,
                   {
-                    name: '',
-                    gradeLevel: ''
+                    roomName: '',
+                    roomType: 'Lecture'
                   }]
                   )
                   }>
@@ -389,6 +395,27 @@ export function SetupWizard() {
                       }} />
                     
                       </div>
+                      <div className="space-y-2">
+                        <Label>Grade Level</Label>
+                        <Input
+                      value={s.gradeLevel}
+                      onChange={(e) => {
+                        const newS = [...subjects];
+                        newS[i].gradeLevel = e.target.value;
+                        setLocalSubjects(newS);
+                      }} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Units</Label>
+                        <Input
+                      type="number"
+                      value={s.units}
+                      onChange={(e) => {
+                        const newS = [...subjects];
+                        newS[i].units = parseInt(e.target.value) || 0;
+                        setLocalSubjects(newS);
+                      }} />
+                      </div>
                     </div>
                 )}
                   <Button
@@ -399,7 +426,9 @@ export function SetupWizard() {
                   ...subjects,
                   {
                     name: '',
-                    code: ''
+                    code: '',
+                    gradeLevel: '1',
+                    units: 3
                   }]
                   )
                   }>
@@ -445,7 +474,7 @@ export function SetupWizard() {
                   Ready to Initialize
                 </h2>
                 <p className="text-sm sm:text-base text-muted-foreground mb-8 max-w-md">
-                  You are about to initialize the system for SY {sy.name} with{' '}
+                  You are about to initialize the system for SY {sy.startYear}-{sy.endYear} with{' '}
                   {classrooms.length} classrooms, {sections.length} sections,
                   and {subjects.length} subjects.
                 </p>
@@ -453,15 +482,17 @@ export function SetupWizard() {
                   <Button
                   variant="ghost"
                   onClick={() => setStep(4)}
-                  className="w-full sm:w-auto">
+                  className="w-full sm:w-auto"
+                  disabled={isSubmitting}>
                   
                     Review Changes
                   </Button>
                   <Button
                   onClick={handleComplete}
-                  className="w-full sm:w-auto sm:px-8">
+                  className="w-full sm:w-auto sm:px-8"
+                  disabled={isSubmitting}>
                   
-                    Complete Setup
+                    {isSubmitting ? 'Saving...' : 'Complete Setup'}
                   </Button>
                 </div>
               </motion.div>
