@@ -1,10 +1,10 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LandingPage } from './pages/LandingPage';
-import { LoginPage } from './pages/LoginPage';
-import { AdminDashboard } from './pages/AdminDashboard';
-import { TeacherDashboard } from './pages/TeacherDashboard';
-import { ParentPortal } from './pages/ParentPortal';
+import { LoginPage } from './pages/auth/LoginPage';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
+import { ParentPortal } from './pages/parent/ParentPortal';
 export function App() {
   return (
     <BrowserRouter>
