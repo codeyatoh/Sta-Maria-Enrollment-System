@@ -7,6 +7,7 @@ import { Label } from '../ui/Label';
 import { CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { collection, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { useAdminData } from '../../lib/adminData';
 
 export function SetupWizard() {
   const { setSetupComplete } = useAdminData();
