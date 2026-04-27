@@ -101,7 +101,7 @@ export function ReportsView() {
                         <SelectItem value="all">All Classrooms</SelectItem>
                         {classrooms.map((c) =>
                       <SelectItem key={c.id} value={c.id}>
-                            {c.name}
+                            {c.roomName}
                           </SelectItem>
                       )}
                       </SelectContent>
