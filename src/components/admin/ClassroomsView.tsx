@@ -230,7 +230,9 @@ export function ClassroomsView() {
                     }>
                     
                     <SelectTrigger>
-                      <SelectValue placeholder="Select classroom" />
+                      <SelectValue placeholder="Select classroom">
+                        {newAssign.classroomId ? realClassrooms.find(c => c.id === newAssign.classroomId)?.roomName : undefined}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {realClassrooms.map((c) =>
