@@ -6,12 +6,14 @@ import { auth, db } from './firebase';
 interface AuthContextType {
   user: User | null;
   role: 'admin' | 'teacher' | 'parent' | null;
+  userData: any | null;
   loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   role: null,
+  userData: null,
   loading: true,
 });
 
@@ -20,20 +22,24 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<'admin' | 'teacher' | 'parent' | null>(null);
+  const [userData, setUserData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
-        // Fetch user role from Firestore
+        // Fetch user role and profile from Firestore
         const docRef = doc(db, 'users', user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setRole(docSnap.data().role);
+          const data = docSnap.data();
+          setRole(data.role);
+          setUserData(data);
         }
       } else {
         setRole(null);
+        setUserData(null);
       }
       setLoading(false);
     });
@@ -42,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, role, loading }}>
+    <AuthContext.Provider value={{ user, role, userData, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );
