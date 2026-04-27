@@ -21,12 +21,15 @@ import { EnrollmentForm } from '../../components/parent/EnrollmentForm';
 import { ChildDetailView } from '../../components/parent/ChildDetailView';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
+import { useAuth } from '../../lib/AuthContext';
 
 function ParentPortalContent() {
+  const { userData } = useAuth();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState('dashboard');
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -112,24 +115,41 @@ function ParentPortalContent() {
       </div>
 
       <div className="border-t border-border p-3 shrink-0">
-        <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-md transition-colors mb-1">
-          <Settings className="w-4 h-4" />
-          Settings
-        </button>
-        <button 
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-md transition-colors mb-2"
-        >
-          <LogOut className="w-4 h-4" />
-          Sign Out
-        </button>
-        <div className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors" onClick={() => navigate('/')}>
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs shrink-0">PU</div>
-          <div className="flex-1 overflow-hidden">
-            <p className="text-sm font-medium truncate">Parent User</p>
-            <p className="text-xs text-muted-foreground truncate">parent@school.edu</p>
+        {showUserMenu && (
+          <div className="mb-2 space-y-1 animate-in slide-in-from-bottom-2 duration-200">
+            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-md transition-colors">
+              <Settings className="w-4 h-4" />
+              Settings
+            </button>
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
           </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+        )}
+        <div 
+          className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors" 
+          onClick={() => setShowUserMenu(!showUserMenu)}
+        >
+          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 uppercase">
+            {userData?.firstName?.charAt(0) || 'P'}{userData?.lastName?.charAt(0) || 'U'}
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <p className="text-sm font-bold truncate text-slate-900">
+              {userData?.firstName} {userData?.lastName}
+            </p>
+            <p className="text-[10px] text-muted-foreground truncate font-medium uppercase tracking-wider">
+              {userData?.relationship || 'Parent'} • {userData?.email}
+            </p>
+          </div>
+          {showUserMenu ? (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
         </div>
       </div>
     </>
@@ -156,7 +176,9 @@ function ParentPortalContent() {
             <img src="/pasted-image.jpg" alt="Logo" className="w-6 h-6 rounded-md object-cover" />
             Parent Portal
           </div>
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs">PU</div>
+          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
+            {userData?.firstName?.charAt(0) || 'P'}{userData?.lastName?.charAt(0) || 'U'}
+          </div>
         </header>
         <div className="flex-1 overflow-hidden bg-muted/30">
           {renderActiveView()}
