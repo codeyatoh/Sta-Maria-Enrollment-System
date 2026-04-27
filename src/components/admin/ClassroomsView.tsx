@@ -19,8 +19,8 @@ import {
   SelectTrigger,
   SelectValue } from
 '../ui/Select';
-import { Plus, Home, Users, Layout, Shield, Info } from 'lucide-react';
-import { useAdminData } from '../../lib/adminData';
+import { Plus, Home, Users, Layout, Shield, Info, Edit, Trash2, MoreHorizontal, UserMinus } from 'lucide-react';
+import { useAdminData, Classroom, Section, Assignment } from '../../lib/adminData';
 import { cn } from '../ui/utils';
 export function ClassroomsView() {
   const {
@@ -29,8 +29,13 @@ export function ClassroomsView() {
     users,
     assignments,
     addClassroom,
+    updateClassroom,
+    deleteClassroom,
     addSection,
-    addAssignment
+    updateSection,
+    deleteSection,
+    addAssignment,
+    deleteAssignment
   } = useAdminData();
   const [isAddClassroomOpen, setIsAddClassroomOpen] = useState(false);
   const [newClassroom, setNewClassroom] = useState({
@@ -52,6 +57,12 @@ export function ClassroomsView() {
     classroomId: '',
     sectionId: ''
   });
+  const [isEditClassroomOpen, setIsEditClassroomOpen] = useState(false);
+  const [editingClassroom, setEditingClassroom] = useState<Classroom | null>(null);
+  
+  const [isEditSectionOpen, setIsEditSectionOpen] = useState(false);
+  const [editingSection, setEditingSection] = useState<Section | null>(null);
+
   const teachers = users.filter((u) => u.role === 'Teacher');
   const handleAddClassroom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +86,22 @@ export function ClassroomsView() {
       status: 'Active'
     });
   };
+  const handleUpdateClassroom = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingClassroom) {
+      updateClassroom(editingClassroom.id, editingClassroom);
+      setIsEditClassroomOpen(false);
+    }
+  };
+
+  const handleUpdateSection = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingSection) {
+      updateSection(editingSection.id, editingSection);
+      setIsEditSectionOpen(false);
+    }
+  };
+
   const handleAssign = (e: React.FormEvent) => {
     e.preventDefault();
     addAssignment(newAssign);
@@ -225,8 +252,8 @@ export function ClassroomsView() {
                       value={newSection.gradeLevel}
                       onValueChange={(v) => setNewSection({ ...newSection, gradeLevel: v })}>
                       <SelectTrigger><SelectValue placeholder="Grade" /></SelectTrigger>
-                      <SelectContent>
-                        {[1,2,3,4,5,6].map(level => (
+                      <SelectContent className="max-h-[200px] overflow-y-auto">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
                           <SelectItem key={level} value={level.toString()}>Grade {level}</SelectItem>
                         ))}
                       </SelectContent>
@@ -259,12 +286,12 @@ export function ClassroomsView() {
                     <SelectTrigger>
                       <SelectValue placeholder="Select classroom" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
                       {classrooms
-                        .filter(c => !newSection.gradeLevel || c.gradeLevel === newSection.gradeLevel)
+                        .filter(c => (!newSection.gradeLevel || c.gradeLevel === newSection.gradeLevel) && c.status === 'Available')
                         .map((c) =>
                         <SelectItem key={c.id} value={c.id}>
-                          {c.roomName}
+                          {c.roomName || 'Unnamed Room'}
                         </SelectItem>
                       )}
                     </SelectContent>
@@ -311,11 +338,16 @@ export function ClassroomsView() {
                 </div>
                 <div className="space-y-2">
                   <Label>Grade Level</Label>
-                  <Input
-                    required
+                  <Select
                     value={newClassroom.gradeLevel}
-                    onChange={(e) => setNewClassroom({ ...newClassroom, gradeLevel: e.target.value })}
-                    placeholder="e.g. 1" />
+                    onValueChange={(v) => setNewClassroom({ ...newClassroom, gradeLevel: v })}>
+                    <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select Grade Level" /></SelectTrigger>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
+                        <SelectItem key={level} value={level.toString()}>Grade {level}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -365,6 +397,137 @@ export function ClassroomsView() {
               </form>
             </DialogContent>
           </Dialog>
+
+          {/* Edit Classroom Dialog */}
+          <Dialog open={isEditClassroomOpen} onOpenChange={setIsEditClassroomOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Edit Classroom</DialogTitle>
+              </DialogHeader>
+              {editingClassroom && (
+                <form onSubmit={handleUpdateClassroom} className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label>Room Name</Label>
+                    <Input
+                      required
+                      value={editingClassroom.roomName}
+                      onChange={(e) => setEditingClassroom({ ...editingClassroom, roomName: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Grade Level</Label>
+                    <Select
+                      value={editingClassroom.gradeLevel}
+                      onValueChange={(v) => setEditingClassroom({ ...editingClassroom, gradeLevel: v })}>
+                      <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select Grade" /></SelectTrigger>
+                      <SelectContent className="max-h-[200px] overflow-y-auto">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
+                          <SelectItem key={level} value={level.toString()}>Grade {level}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Room Type</Label>
+                      <Select
+                        value={editingClassroom.roomType}
+                        onValueChange={(v: any) => setEditingClassroom({ ...editingClassroom, roomType: v })}>
+                        <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Lecture">Lecture</SelectItem>
+                          <SelectItem value="Laboratory">Laboratory</SelectItem>
+                          <SelectItem value="Multipurpose">Multipurpose</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select
+                        value={editingClassroom.status}
+                        onValueChange={(v: any) => setEditingClassroom({ ...editingClassroom, status: v })}>
+                        <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Available">Available</SelectItem>
+                          <SelectItem value="Full">Full</SelectItem>
+                          <SelectItem value="Maintenance">Maintenance</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setIsEditClassroomOpen(false)}>Cancel</Button>
+                    <Button type="submit">Update Classroom</Button>
+                  </DialogFooter>
+                </form>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Section Dialog */}
+          <Dialog open={isEditSectionOpen} onOpenChange={setIsEditSectionOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Edit Section</DialogTitle>
+              </DialogHeader>
+              {editingSection && (
+                <form onSubmit={handleUpdateSection} className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label>Section Name</Label>
+                    <Input
+                      required
+                      value={editingSection.name}
+                      onChange={(e) => setEditingSection({ ...editingSection, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Grade Level</Label>
+                      <Select
+                        value={editingSection.gradeLevel}
+                        onValueChange={(v) => setEditingSection({ ...editingSection, gradeLevel: v })}>
+                        <SelectTrigger><SelectValue placeholder="Grade" /></SelectTrigger>
+                        <SelectContent className="max-h-[200px] overflow-y-auto">
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
+                            <SelectItem key={level} value={level.toString()}>Grade {level}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select
+                        value={editingSection.status}
+                        onValueChange={(v: any) => setEditingSection({ ...editingSection, status: v })}>
+                        <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Active">Active</SelectItem>
+                          <SelectItem value="Inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Classroom</Label>
+                    <Select
+                      value={editingSection.classroomId}
+                      onValueChange={(v) => setEditingSection({ ...editingSection, classroomId: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select Classroom" /></SelectTrigger>
+                      <SelectContent>
+                        {classrooms.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.roomName}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setIsEditSectionOpen(false)}>Cancel</Button>
+                    <Button type="submit">Update Section</Button>
+                  </DialogFooter>
+                </form>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       </header>
 
@@ -386,27 +549,47 @@ export function ClassroomsView() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-lg leading-tight">
-                        {classroom.roomName}
+                        {classroom.roomName || 'Standard Classroom'}
                       </h3>
                       <p className="text-sm text-muted-foreground mt-0.5">
                         Grade {classroom.gradeLevel}
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1 items-end">
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md",
-                        classroom.status === 'Available' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
-                        classroom.status === 'Full' ? "bg-amber-50 text-amber-600 border border-amber-100" :
-                        "bg-rose-50 text-rose-600 border border-rose-100"
-                      )}>
-                      {classroom.status}
-                    </Badge>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      {classroom.roomType}
-                    </span>
+                  <div className="flex flex-col gap-2 items-end">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/5"
+                        onClick={() => { setEditingClassroom(classroom); setIsEditClassroomOpen(true); }}
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50"
+                        onClick={() => deleteClassroom(classroom.id)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md",
+                          classroom.status === 'Available' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
+                          classroom.status === 'Full' ? "bg-amber-50 text-amber-600 border border-amber-100" :
+                          "bg-rose-50 text-rose-600 border border-rose-100"
+                        )}>
+                        {classroom.status || 'Available'}
+                      </Badge>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        {classroom.roomType || 'Lecture'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -414,7 +597,7 @@ export function ClassroomsView() {
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Created Date</span>
                     <span className="text-xs font-semibold text-slate-600">
-                      {new Date(classroom.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {classroom.createdAt ? new Date(classroom.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                     </span>
                   </div>
                   <div className="flex flex-col items-end">
@@ -439,33 +622,66 @@ export function ClassroomsView() {
                     return (
                       <div
                         key={section.id}
-                        className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-muted/30">
+                        className="group flex flex-col p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-md hover:shadow-slate-200/50 hover:border-primary/20 transition-all duration-200">
                         
-                          <div className="flex flex-col">
-                            <span className="font-medium text-sm">
-                              {section.name}
-                            </span>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className={cn(
-                                "w-1.5 h-1.5 rounded-full",
-                                section.status === 'Active' ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
-                              )} />
-                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{section.status}</span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-sm text-slate-900 leading-tight">
+                                {section.name}
+                              </span>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className={cn(
+                                  "w-1.5 h-1.5 rounded-full",
+                                  section.status === 'Active' ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
+                                )} />
+                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{section.status}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/5"
+                                onClick={() => { setEditingSection(section); setIsEditSectionOpen(true); }}
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50"
+                                onClick={() => deleteSection(section.id)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
                             </div>
                           </div>
-                          {teacher ?
-                        <div className="flex items-center text-xs text-muted-foreground">
-                              <Users className="w-3 h-3 mr-1.5" />
-                              {teacher.firstName} {teacher.lastName}
-                            </div> :
 
-                        <Badge
-                          variant="outline"
-                          className="text-xs text-orange-600 border-orange-200 bg-orange-50">
-                          
-                              Unassigned
-                            </Badge>
-                        }
+                          <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                            {teacher ?
+                              <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center text-xs text-slate-600 font-medium">
+                                  <Users className="w-3.5 h-3.5 mr-2 text-slate-400" />
+                                  {teacher.firstName} {teacher.lastName}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 opacity-0 group-hover:opacity-100"
+                                  onClick={() => assignment && deleteAssignment(assignment.id)}
+                                  title="Remove Assignment"
+                                >
+                                  <UserMinus className="w-3 h-3" />
+                                </Button>
+                              </div> :
+
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] font-bold uppercase tracking-wider text-orange-600 border-orange-100 bg-orange-50/50 px-2 py-0.5 rounded-md">
+                                Unassigned
+                              </Badge>
+                            }
+                          </div>
                         </div>);
 
                   })
