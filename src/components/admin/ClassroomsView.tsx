@@ -114,7 +114,7 @@ export function ClassroomsView() {
                     <SelectContent>
                       {teachers.map((t) =>
                       <SelectItem key={t.id} value={t.id}>
-                          {t.name}
+                          {t.firstName} {t.lastName}
                         </SelectItem>
                       )}
                     </SelectContent>
@@ -373,7 +373,7 @@ export function ClassroomsView() {
                           {teacher ?
                         <div className="flex items-center text-xs text-muted-foreground">
                               <Users className="w-3 h-3 mr-1.5" />
-                              {teacher.name}
+                              {teacher.firstName} {teacher.lastName}
                             </div> :
 
                         <Badge
