@@ -46,14 +46,48 @@ import {
   UserCheck,
   Heart
 } from 'lucide-react';
+import { initializeApp, getApp, getApps } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, collection, onSnapshot, query } from 'firebase/firestore';
+import { db, firebaseConfig } from '../../lib/firebase';
 import { useAdminData, User } from '../../lib/adminData';
+
+// Secondary app for admin to create users without being logged out
+const secondaryApp = getApps().find(app => app.name === 'Secondary') || initializeApp(firebaseConfig, 'Secondary');
+const secondaryAuth = getAuth(secondaryApp);
 export function UsersView() {
-  const { users, addUser, updateUser, deleteUser } = useAdminData();
+  const { users, addUser, updateUser, deleteUser, setUsers } = useAdminData() as any; // Temporary cast to use setUsers if not in context
+  const [realUsers, setRealUsers] = useState<User[]>([]);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Fetch real users from Firestore
+  React.useEffect(() => {
+    const q = query(collection(db, 'users'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const usersData: User[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        usersData.push({
+          id: doc.id,
+          firstName: data.firstName || '',
+          lastName: data.lastName || '',
+          gender: data.gender || 'Other',
+          contactNumber: data.contactNumber || '',
+          email: data.email || '',
+          role: data.role ? data.role.charAt(0).toUpperCase() + data.role.slice(1) : 'Parent',
+          status: data.status || 'Active',
+          createdAt: data.createdAt || new Date().toISOString()
+        } as User);
+      });
+      setRealUsers(usersData);
+    });
+
+    return () => unsubscribe();
+  }, []);
   const [statusFilter, setStatusFilter] = useState('All');
   
   const [newUser, setNewUser] = useState({
@@ -73,34 +107,88 @@ export function UsersView() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const handleAddUser = (e: React.FormEvent) => {
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newUser.password !== newUser.confirmPassword) {
       setPasswordError("Passwords do not match");
       return;
     }
     setPasswordError(null);
-    
-    // Create a user object for storage (omitting confirmPassword and password if not needed in DB)
-    const userToSave = { ...newUser };
-    // @ts-ignore - explicitly omitting for storage
-    delete userToSave.confirmPassword;
-    addUser(userToSave);
-    
-    setIsAddOpen(false);
-    setNewUser({
-      firstName: '',
-      middleName: '',
-      lastName: '',
-      suffix: '',
-      role: 'Teacher',
-      gender: 'Male',
-      email: '',
-      contactNumber: '',
-      password: '',
-      confirmPassword: '',
-      status: 'Active'
-    });
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      // 1. Create user in Firebase Auth (using secondary instance to keep admin logged in)
+      const userCredential = await createUserWithEmailAndPassword(
+        secondaryAuth,
+        newUser.email,
+        newUser.password
+      );
+      const user = userCredential.user;
+
+      // 2. Prepare profile for Firestore
+      const userProfile = {
+        firstName: newUser.firstName,
+        middleName: newUser.middleName,
+        lastName: newUser.lastName,
+        suffix: newUser.suffix,
+        gender: newUser.gender,
+        role: newUser.role.toLowerCase(), // Store as lowercase for app consistency
+        email: newUser.email,
+        contactNumber: newUser.contactNumber,
+        status: newUser.status,
+        createdAt: new Date().toISOString()
+      };
+
+      // 3. Save to Firestore
+      await setDoc(doc(db, 'users', user.uid), userProfile);
+
+      // 4. Update local state via admin context
+      addUser({
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        gender: newUser.gender,
+        email: newUser.email,
+        contactNumber: newUser.contactNumber,
+        role: newUser.role,
+        status: newUser.status,
+        id: user.uid,
+        createdAt: userProfile.createdAt
+      });
+
+      // 5. Success cleanup
+      setIsAddOpen(false);
+      setNewUser({
+        firstName: '',
+        middleName: '',
+        lastName: '',
+        suffix: '',
+        role: 'Teacher',
+        gender: 'Male',
+        email: '',
+        contactNumber: '',
+        password: '',
+        confirmPassword: '',
+        status: 'Active'
+      });
+      
+    } catch (err: any) {
+      console.error(err);
+      let message = "Failed to create account.";
+      if (err.code === 'auth/email-already-in-use') {
+        message = "This email address is already in use.";
+      } else if (err.code === 'auth/invalid-email') {
+        message = "Invalid email address format.";
+      } else if (err.code === 'auth/weak-password') {
+        message = "Password must be at least 6 characters.";
+      }
+      setError(message);
+    } finally {
+      setIsSaving(false);
+    }
   };
   const handleEditUser = (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,12 +201,12 @@ export function UsersView() {
 
   const [roleFilter, setRoleFilter] = useState('All');
   
-  const totalUsers = users.length;
-  const teacherCount = users.filter(u => u.role === 'Teacher').length;
-  const parentCount = users.filter(u => u.role === 'Parent').length;
-  const activeCount = users.filter(u => u.status === 'Active').length;
+  const totalUsers = realUsers.length;
+  const teacherCount = realUsers.filter(u => u.role === 'Teacher').length;
+  const parentCount = realUsers.filter(u => u.role === 'Parent').length;
+  const activeCount = realUsers.filter(u => u.status === 'Active').length;
 
-  const filteredUsers = users.filter((u) => {
+  const filteredUsers = realUsers.filter((u) => {
     const fullName = `${u.firstName} ${u.lastName}`.toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'All' || u.status === statusFilter;
@@ -323,10 +411,17 @@ export function UsersView() {
                   </div>
 
                   {passwordError && <p className="text-sm font-medium text-destructive">{passwordError}</p>}
+                  {error && (
+                    <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium">
+                      {error}
+                    </div>
+                  )}
 
                   <DialogFooter className="pt-4 border-t gap-2">
-                    <Button type="button" variant="ghost" onClick={() => setIsAddOpen(false)} className="rounded-xl">Cancel</Button>
-                    <Button type="submit" className="rounded-xl px-8 bg-primary hover:bg-primary/90 transition-all">Save Account</Button>
+                    <Button type="button" variant="ghost" onClick={() => setIsAddOpen(false)} className="rounded-xl" disabled={isSaving}>Cancel</Button>
+                    <Button type="submit" className="rounded-xl px-8 bg-primary hover:bg-primary/90 transition-all" disabled={isSaving}>
+                      {isSaving ? "Creating..." : "Save Account"}
+                    </Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
