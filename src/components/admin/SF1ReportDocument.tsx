@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { Printer, X } from 'lucide-react';
-import { useParentData } from '../../lib/parentData';
+import { initialChildren } from '../../lib/parentData';
 
 interface SF1ReportDocumentProps {
   onClose: () => void;
@@ -11,7 +11,7 @@ interface SF1ReportDocumentProps {
 }
 
 export function SF1ReportDocument({ onClose, schoolYear = '2026-2027', gradeLevel = 'All', section = 'All Sections' }: SF1ReportDocumentProps) {
-  const { children } = useParentData();
+  const children = initialChildren;
 
   const handlePrint = () => {
     window.print();
