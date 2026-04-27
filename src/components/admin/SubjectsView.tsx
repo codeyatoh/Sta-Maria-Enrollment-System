@@ -43,6 +43,11 @@ export function SubjectsView() {
       snapshot.forEach((d) => {
         subjectData.push({ id: d.id, ...d.data() } as Subject);
       });
+      subjectData.sort((a, b) => {
+        const timeA = (a.createdAt as any)?.toMillis ? (a.createdAt as any).toMillis() : (a.createdAt ? new Date(a.createdAt as string).getTime() : 0);
+        const timeB = (b.createdAt as any)?.toMillis ? (b.createdAt as any).toMillis() : (b.createdAt ? new Date(b.createdAt as string).getTime() : 0);
+        return timeB - timeA;
+      });
       setSubjects(subjectData);
     });
     return () => unsub();
@@ -60,7 +65,9 @@ export function SubjectsView() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [viewingSubject, setViewingSubject] = useState<Subject | null>(null);
-  const [selectedYear, setSelectedYear] = useState('2024-2025');
+  const [selectedYear, setSelectedYear] = useState('All');
+
+  const uniqueYears = Array.from(new Set(subjects.map(s => s.academicYear))).sort().reverse();
 
   const [newSubject, setNewSubject] = useState({
     name: '',
@@ -119,7 +126,7 @@ export function SubjectsView() {
           </h1>
           <p className="text-xs text-slate-500 font-medium flex items-center gap-2">
             <Calendar className="w-3 h-3" />
-            Managing subjects for Academic Year {selectedYear}
+            Managing subjects {selectedYear === 'All' ? 'across all academic years' : `for Academic Year ${selectedYear}`}
           </p>
         </div>
         
@@ -133,9 +140,10 @@ export function SubjectsView() {
                 <SelectValue placeholder="Academic Year" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="2023-2024">2023-2024</SelectItem>
-                <SelectItem value="2024-2025">2024-2025</SelectItem>
-                <SelectItem value="2025-2026">2025-2026</SelectItem>
+                <SelectItem value="All">All Years</SelectItem>
+                {uniqueYears.map(year => (
+                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -282,20 +290,20 @@ export function SubjectsView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {subjects.filter(s => s.academicYear === selectedYear).length === 0 ?
+                {subjects.filter(s => selectedYear === 'All' || s.academicYear === selectedYear).length === 0 ?
                 <TableRow>
                     <TableCell
                     colSpan={7}
                     className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <BookOpen className="w-8 h-8 text-slate-200" />
-                        <p className="text-sm text-slate-400 font-medium">No subjects found for A.Y. {selectedYear}</p>
+                        <p className="text-sm text-slate-400 font-medium">No subjects found{selectedYear !== 'All' && ` for A.Y. ${selectedYear}`}</p>
                       </div>
                     </TableCell>
                   </TableRow> :
 
                 subjects
-                  .filter(s => s.academicYear === selectedYear)
+                  .filter(s => selectedYear === 'All' || s.academicYear === selectedYear)
                   .map((subject, index) =>
                 <TableRow
                   key={subject.id}
