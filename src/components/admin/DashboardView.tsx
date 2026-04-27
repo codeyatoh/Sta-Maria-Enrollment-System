@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -9,40 +9,70 @@ import {
   Home } from
 'lucide-react';
 import { useAdminData } from '../../lib/adminData';
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { initialChildren } from '../../lib/parentData';
+
 export function DashboardView() {
-  const { users, classrooms, setSetupComplete } = useAdminData();
-  const activeTeachers = users.filter(
-    (u) => u.role === 'Teacher' && u.status === 'Active'
-  ).length;
-  const enrolledParents = users.filter((u) => u.role === 'Parent').length;
+  const { setSetupComplete } = useAdminData();
+  
+  const [statsData, setStatsData] = useState({
+    students: initialChildren.length,
+    teachers: 0,
+    parents: 0,
+    classrooms: 0
+  });
+
+  useEffect(() => {
+    const usersUnsub = onSnapshot(query(collection(db, 'users')), (snapshot) => {
+      let teachers = 0;
+      let parents = 0;
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.role && data.role.toLowerCase() === 'teacher' && data.status === 'Active') teachers++;
+        if (data.role && data.role.toLowerCase() === 'parent') parents++;
+      });
+      setStatsData(prev => ({ ...prev, teachers, parents }));
+    });
+
+    const classroomsUnsub = onSnapshot(query(collection(db, 'classrooms')), (snapshot) => {
+      setStatsData(prev => ({ ...prev, classrooms: snapshot.size }));
+    });
+
+    return () => {
+      usersUnsub();
+      classroomsUnsub();
+    };
+  }, []);
+
   const stats = [
   {
     label: 'Total Students',
-    value: '1,234',
-    change: '+20.1% from last month',
+    value: statsData.students.toString(),
+    change: 'enrolled in system',
     icon: Users,
     positive: true
   },
   {
     label: 'Active Teachers',
-    value: activeTeachers.toString(),
-    change: '+2 new hires this month',
+    value: statsData.teachers.toString(),
+    change: 'live from firestore',
     icon: GraduationCap,
     positive: true
   },
   {
     label: 'Enrolled Parents',
-    value: enrolledParents.toString(),
-    change: '+15% from last month',
+    value: statsData.parents.toString(),
+    change: 'live from firestore',
     icon: Heart,
     positive: true
   },
   {
     label: 'Active Classrooms',
-    value: classrooms.length.toString(),
-    change: '2 pending assignments',
+    value: statsData.classrooms.toString(),
+    change: 'live from firestore',
     icon: Home,
-    positive: false
+    positive: true
   }];
 
   const recentActivity = [
