@@ -29,6 +29,7 @@ function AdminDashboardContent() {
   const { setupComplete } = useAdminData();
   const [activeView, setActiveView] = useState('dashboard');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   if (!setupComplete) {
     return <SetupWizard />;
@@ -96,24 +97,35 @@ function AdminDashboardContent() {
       </div>
 
       <div className="border-t border-border p-3 shrink-0">
-        <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-md transition-colors mb-1">
-          <Settings className="w-4 h-4" />
-          Settings
-        </button>
-        <button 
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-md transition-colors mb-2"
+        {showUserMenu && (
+          <div className="mb-2 space-y-1 animate-in slide-in-from-bottom-2 duration-200">
+            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-md transition-colors">
+              <Settings className="w-4 h-4" />
+              Settings
+            </button>
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
+          </div>
+        )}
+        <div 
+          className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors" 
+          onClick={() => setShowUserMenu(!showUserMenu)}
         >
-          <LogOut className="w-4 h-4" />
-          Sign Out
-        </button>
-        <div className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 rounded-md cursor-pointer transition-colors" onClick={() => navigate('/')}>
           <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs shrink-0">AU</div>
           <div className="flex-1 overflow-hidden">
-            <p className="text-sm font-medium truncate">Admin User</p>
-            <p className="text-xs text-muted-foreground truncate">admin@school.edu</p>
+            <p className="text-sm font-bold truncate text-slate-900">Admin User</p>
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground truncate">admin@school.edu</p>
           </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          {showUserMenu ? (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
         </div>
       </div>
     </>
