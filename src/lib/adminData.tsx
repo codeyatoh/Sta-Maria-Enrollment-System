@@ -9,13 +9,18 @@ export type SchoolYear = {
 };
 export type Classroom = {
   id: string;
-  name: string;
+  roomName: string;
+  roomType: 'Lecture' | 'Laboratory' | 'Multipurpose';
+  status: 'Available' | 'Full' | 'Maintenance';
   gradeLevel: string;
+  createdAt: string;
 };
 export type Section = {
   id: string;
   name: string;
   classroomId: string;
+  gradeLevel: string;
+  status: 'Active' | 'Inactive';
 };
 export type Subject = {
   id: string;
@@ -121,35 +126,50 @@ const initialUsers: User[] = [
 const initialClassrooms: Classroom[] = [
 {
   id: '1',
-  name: 'Grade 1',
-  gradeLevel: '1'
+  roomName: 'Grade 1 - Room 101',
+  roomType: 'Lecture',
+  status: 'Available',
+  gradeLevel: '1',
+  createdAt: '2024-01-10'
 },
 {
   id: '2',
-  name: 'Grade 2',
-  gradeLevel: '2'
+  roomName: 'Grade 2 - Room 102',
+  roomType: 'Lecture',
+  status: 'Available',
+  gradeLevel: '2',
+  createdAt: '2024-01-11'
 },
 {
   id: '3',
-  name: 'Grade 3',
-  gradeLevel: '3'
+  roomName: 'Grade 3 - Lab 1',
+  roomType: 'Laboratory',
+  status: 'Maintenance',
+  gradeLevel: '3',
+  createdAt: '2024-01-12'
 }];
 
 const initialSections: Section[] = [
 {
   id: '1',
   name: 'Section A',
-  classroomId: '1'
+  classroomId: '1',
+  gradeLevel: '1',
+  status: 'Active'
 },
 {
   id: '2',
   name: 'Section B',
-  classroomId: '1'
+  classroomId: '1',
+  gradeLevel: '1',
+  status: 'Active'
 },
 {
   id: '3',
   name: 'Section A',
-  classroomId: '2'
+  classroomId: '2',
+  gradeLevel: '2',
+  status: 'Active'
 }];
 
 const initialSubjects: Subject[] = [
@@ -201,12 +221,13 @@ export function AdminDataProvider({ children }: {children: ReactNode;}) {
   classrooms.length > 0 &&
   sections.length > 0 &&
   subjects.length > 0;
-  const addClassroom = (c: Omit<Classroom, 'id'>) =>
+  const addClassroom = (c: Omit<Classroom, 'id' | 'createdAt'>) =>
   setClassrooms([
   ...classrooms,
   {
     ...c,
-    id: Date.now().toString()
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString().split('T')[0]
   }]
   );
   const addSection = (s: Omit<Section, 'id'>) =>
