@@ -358,7 +358,7 @@ export function ClassroomsView() {
                         .filter(c => c.status === 'Available')
                         .map((c) =>
                         <SelectItem key={c.id} value={c.id}>
-                          {c.roomName || 'Unnamed Room'} (Grade {c.gradeLevel})
+                          {c.roomName || 'Unnamed Room'}
                         </SelectItem>
                       )}
                     </SelectContent>
@@ -403,21 +403,7 @@ export function ClassroomsView() {
                     onChange={(e) => setNewClassroom({ ...newClassroom, roomName: e.target.value })}
                     placeholder="e.g. Grade 1 - Room 101" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Grade Level</Label>
-                  <Select
-                    value={newClassroom.gradeLevel}
-                    onValueChange={(v) => setNewClassroom({ ...newClassroom, gradeLevel: v })}>
-                    <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select Grade Level">
-                      {newClassroom.gradeLevel ? `Grade ${newClassroom.gradeLevel}` : undefined}
-                    </SelectValue></SelectTrigger>
-                    <SelectContent className="max-h-[200px] overflow-y-auto">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
-                        <SelectItem key={level} value={level.toString()}>Grade {level}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Room Type</Label>
@@ -483,21 +469,7 @@ export function ClassroomsView() {
                       onChange={(e) => setEditingClassroom({ ...editingClassroom, roomName: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Grade Level</Label>
-                    <Select
-                      value={editingClassroom.gradeLevel}
-                      onValueChange={(v) => setEditingClassroom({ ...editingClassroom, gradeLevel: v })}>
-                      <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select Grade">
-                        {editingClassroom.gradeLevel ? `Grade ${editingClassroom.gradeLevel}` : undefined}
-                      </SelectValue></SelectTrigger>
-                      <SelectContent className="max-h-[200px] overflow-y-auto">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
-                          <SelectItem key={level} value={level.toString()}>Grade {level}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Room Type</Label>
@@ -626,9 +598,7 @@ export function ClassroomsView() {
                       <h3 className="font-semibold text-lg leading-tight">
                         {classroom.roomName || 'Standard Classroom'}
                       </h3>
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        Grade {classroom.gradeLevel}
-                      </p>
+
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 items-end">
