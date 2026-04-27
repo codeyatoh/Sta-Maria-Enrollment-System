@@ -204,7 +204,9 @@ export function ClassroomsView() {
                     }>
                     
                     <SelectTrigger>
-                      <SelectValue placeholder="Select teacher" />
+                      <SelectValue placeholder="Select teacher">
+                        {newAssign.teacherId ? (() => { const t = teachers.find(t => t.id === newAssign.teacherId); return t ? `${t.firstName} ${t.lastName}` : undefined; })() : undefined}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {teachers.map((t) =>
@@ -252,7 +254,9 @@ export function ClassroomsView() {
                     disabled={!newAssign.classroomId}>
                     
                     <SelectTrigger>
-                      <SelectValue placeholder="Select section" />
+                      <SelectValue placeholder="Select section">
+                        {newAssign.sectionId ? realSections.find(s => s.id === newAssign.sectionId)?.name : undefined}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {realSections.
@@ -310,7 +314,9 @@ export function ClassroomsView() {
                     <Select
                       value={newSection.gradeLevel}
                       onValueChange={(v) => setNewSection({ ...newSection, gradeLevel: v })}>
-                      <SelectTrigger><SelectValue placeholder="Grade" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Grade">
+                        {newSection.gradeLevel ? `Grade ${newSection.gradeLevel}` : undefined}
+                      </SelectValue></SelectTrigger>
                       <SelectContent className="max-h-[200px] overflow-y-auto">
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
                           <SelectItem key={level} value={level.toString()}>Grade {level}</SelectItem>
@@ -343,7 +349,9 @@ export function ClassroomsView() {
                     }>
                     
                     <SelectTrigger>
-                      <SelectValue placeholder="Select classroom" />
+                      <SelectValue placeholder="Select classroom">
+                        {newSection.classroomId ? realClassrooms.find(c => c.id === newSection.classroomId)?.roomName : undefined}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px] overflow-y-auto">
                       {realClassrooms
@@ -400,7 +408,9 @@ export function ClassroomsView() {
                   <Select
                     value={newClassroom.gradeLevel}
                     onValueChange={(v) => setNewClassroom({ ...newClassroom, gradeLevel: v })}>
-                    <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select Grade Level" /></SelectTrigger>
+                    <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select Grade Level">
+                      {newClassroom.gradeLevel ? `Grade ${newClassroom.gradeLevel}` : undefined}
+                    </SelectValue></SelectTrigger>
                     <SelectContent className="max-h-[200px] overflow-y-auto">
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
                         <SelectItem key={level} value={level.toString()}>Grade {level}</SelectItem>
@@ -478,7 +488,9 @@ export function ClassroomsView() {
                     <Select
                       value={editingClassroom.gradeLevel}
                       onValueChange={(v) => setEditingClassroom({ ...editingClassroom, gradeLevel: v })}>
-                      <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select Grade" /></SelectTrigger>
+                      <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select Grade">
+                        {editingClassroom.gradeLevel ? `Grade ${editingClassroom.gradeLevel}` : undefined}
+                      </SelectValue></SelectTrigger>
                       <SelectContent className="max-h-[200px] overflow-y-auto">
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
                           <SelectItem key={level} value={level.toString()}>Grade {level}</SelectItem>
@@ -545,7 +557,9 @@ export function ClassroomsView() {
                       <Select
                         value={editingSection.gradeLevel}
                         onValueChange={(v) => setEditingSection({ ...editingSection, gradeLevel: v })}>
-                        <SelectTrigger><SelectValue placeholder="Grade" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Grade">
+                          {editingSection.gradeLevel ? `Grade ${editingSection.gradeLevel}` : undefined}
+                        </SelectValue></SelectTrigger>
                         <SelectContent className="max-h-[200px] overflow-y-auto">
                           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
                             <SelectItem key={level} value={level.toString()}>Grade {level}</SelectItem>
@@ -571,7 +585,9 @@ export function ClassroomsView() {
                     <Select
                       value={editingSection.classroomId}
                       onValueChange={(v) => setEditingSection({ ...editingSection, classroomId: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select Classroom" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Select Classroom">
+                        {editingSection.classroomId ? realClassrooms.find(c => c.id === editingSection.classroomId)?.roomName : undefined}
+                      </SelectValue></SelectTrigger>
                       <SelectContent>
                         {realClassrooms.map(c => (
                           <SelectItem key={c.id} value={c.id}>{c.roomName}</SelectItem>
