@@ -52,7 +52,8 @@ type AdminContextType = {
   subjects: Subject[];
   addSubject: (s: Omit<Subject, 'id'>) => void;
   users: User[];
-  addUser: (u: Omit<User, 'id'>) => void;
+  addUser: (u: Omit<User, 'id' | 'createdAt'>) => void;
+  updateUser: (id: string, updates: Partial<User>) => void;
   deleteUser: (id: string) => void;
   assignments: Assignment[];
   addAssignment: (a: Omit<Assignment, 'id'>) => void;
