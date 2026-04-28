@@ -1,11 +1,25 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { useState, createContext, useContext, ReactNode } from 'react';
+import React, { useState, createContext, useContext, ReactNode, useEffect } from 'react';
+import { db } from './firebase';
+import { 
+  collection, 
+  onSnapshot, 
+  query, 
+  where, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  serverTimestamp 
+} from 'firebase/firestore';
+import { useAuth } from './AuthContext';
+
 export type AttendanceRecord = {
   date: string;
   status: 'Present' | 'Absent' | 'Late';
 };
 export type Child = {
   id: string;
+  parentId: string;
   firstName: string;
   lastName: string;
   middleName: string;
@@ -46,7 +60,7 @@ export type Child = {
   };
   status: 'Pending' | 'Enrolled' | 'Rejected';
   requirements: 'Complete' | 'Incomplete' | string;
-  submittedAt: string;
+  submittedAt: unknown;
   attendance: AttendanceRecord[];
 };
 type ParentContextType = {
@@ -54,164 +68,65 @@ type ParentContextType = {
   addChild: (
   child: Omit<
     Child,
-    'id' | 'status' | 'requirements' | 'submittedAt' | 'attendance'>)
-
-  => void;
-  updateChild: (id: string, updates: Partial<Child>) => void;
+    'id' | 'status' | 'requirements' | 'submittedAt' | 'attendance' | 'parentId'>)
+  => Promise<void>;
+  updateChild: (id: string, updates: Partial<Child>) => Promise<void>;
+  loading: boolean;
 };
-const generateMockAttendance = (): AttendanceRecord[] => {
-  const records: AttendanceRecord[] = [];
-  const today = new Date();
-  for (let i = 0; i < 25; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    // Skip weekends
-    if (d.getDay() === 0 || d.getDay() === 6) continue;
-    // Random status weighted towards Present
-    const rand = Math.random();
-    const status = rand > 0.95 ? 'Absent' : rand > 0.85 ? 'Late' : 'Present';
-    records.push({
-      date: d.toISOString().split('T')[0],
-      status
-    });
-  }
-  return records;
-};
-export const initialChildren: Child[] = [
-{
-  id: '1',
-  firstName: 'Juan',
-  lastName: 'Dela Cruz',
-  middleName: 'Santos',
-  birthDate: '2016-05-14',
-  gender: 'Male',
-  lrn: '123456789012',
-  gradeLevel: '1',
-  address: {
-    street: '123 Rizal St',
-    barangay: 'Poblacion',
-    city: 'Sta. Maria',
-    province: 'Bulacan',
-    zipCode: '3022'
-  },
-  medical: {
-    height: '110',
-    weight: '20',
-    bloodType: 'O+',
-    allergies: 'None',
-    hasDiagnosis: false,
-    diagnoses: [],
-    hasManifestations: false,
-    manifestations: [],
-    hasPwdId: false,
-    pwdId: '',
-    emergencyContact: 'Maria Dela Cruz',
-    emergencyPhone: '09123456789'
-  },
-  additional: {
-    motherTongue: 'Tagalog',
-    religion: 'Catholic',
-    isIndigenous: false,
-    indigenousGroup: '',
-    is4ps: false,
-    learningMode: 'Blended'
-  },
-  status: 'Enrolled',
-  requirements: 'Complete',
-  submittedAt: '2024-07-15',
-  attendance: generateMockAttendance()
-},
-{
-  id: '2',
-  firstName: 'Ana',
-  lastName: 'Dela Cruz',
-  middleName: 'Santos',
-  birthDate: '2014-08-22',
-  gender: 'Female',
-  lrn: '123456789013',
-  gradeLevel: '3',
-  address: {
-    street: '123 Rizal St',
-    barangay: 'Poblacion',
-    city: 'Sta. Maria',
-    province: 'Bulacan',
-    zipCode: '3022'
-  },
-  medical: {
-    height: '125',
-    weight: '25',
-    bloodType: 'O+',
-    allergies: 'Peanuts',
-    hasDiagnosis: true,
-    diagnoses: ['Asthma'],
-    hasManifestations: false,
-    manifestations: [],
-    hasPwdId: false,
-    pwdId: '',
-    emergencyContact: 'Maria Dela Cruz',
-    emergencyPhone: '09123456789'
-  },
-  additional: {
-    motherTongue: 'Tagalog',
-    religion: 'Catholic',
-    isIndigenous: false,
-    indigenousGroup: '',
-    is4ps: false,
-    learningMode: 'Blended'
-  },
-  status: 'Pending',
-  requirements: 'Missing Medical Certificate',
-  submittedAt: '2024-08-01',
-  attendance: []
-}];
 
 const ParentContext = createContext<ParentContextType | undefined>(undefined);
-export function ParentDataProvider({
-  children: reactChildren
 
+export function ParentDataProvider({ children: reactChildren }: {children: ReactNode;}) {
+  const { user } = useAuth();
+  const [children, setChildren] = useState<Child[]>([]);
+  const [loading, setLoading] = useState(true);
 
-}: {children: ReactNode;}) {
-  const [children, setChildren] = useState<Child[]>(initialChildren);
-  const addChild = (
-  childData: Omit<
-    Child,
-    'id' | 'status' | 'requirements' | 'submittedAt' | 'attendance'>) =>
+  useEffect(() => {
+    if (!user) {
+      setChildren([]);
+      setLoading(false);
+      return;
+    }
 
-  {
-    const newChild: Child = {
+    const q = query(collection(db, 'enrollments'), where('parentId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setChildren(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Child)));
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const addChild = async (
+    childData: Omit<Child, 'id' | 'status' | 'requirements' | 'submittedAt' | 'attendance' | 'parentId'>
+  ) => {
+    if (!user) return;
+    await addDoc(collection(db, 'enrollments'), {
       ...childData,
-      id: Date.now().toString(),
+      parentId: user.uid,
       status: 'Pending',
       requirements: 'Complete',
-      submittedAt: new Date().toISOString().split('T')[0],
+      submittedAt: serverTimestamp(),
       attendance: []
-    };
-    setChildren([...children, newChild]);
+    });
   };
-  const updateChild = (id: string, updates: Partial<Child>) => {
-    setChildren(
-      children.map((c) =>
-      c.id === id ?
-      {
-        ...c,
-        ...updates
-      } :
-      c
-      )
-    );
+
+  const updateChild = async (id: string, updates: Partial<Child>) => {
+    await updateDoc(doc(db, 'enrollments', id), updates);
   };
+
   return (
     <ParentContext.Provider
       value={{
         children,
         addChild,
-        updateChild
+        updateChild,
+        loading
       }}>
-      
       {reactChildren}
     </ParentContext.Provider>);
-
 }
+
 export function useParentData() {
   const context = useContext(ParentContext);
   if (context === undefined) {

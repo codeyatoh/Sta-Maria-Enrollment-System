@@ -5,12 +5,17 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
-import { collection, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAdminData } from '../../lib/adminData';
 
 export function SetupWizard() {
-  const { setSetupComplete } = useAdminData();
+  const { 
+    setSetupComplete,
+    addClassroom,
+    addSection,
+    addSubject
+  } = useAdminData();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -20,7 +25,7 @@ export function SetupWizard() {
     endYear: '2026'
   });
   const [classrooms, setLocalClassrooms] = useState([
-    { roomName: 'Room 101', roomType: 'Lecture' }
+    { roomName: 'Room 101', roomType: 'Lecture' as 'Lecture' | 'Laboratory' | 'Multipurpose' }
   ]);
   const [sections, setLocalSections] = useState<{ name: string; classroomIndex?: number }[]>([
     { name: 'Section A' }
@@ -34,49 +39,48 @@ export function SetupWizard() {
     try {
       const academicYearStr = `${sy.startYear}-${sy.endYear}`;
       
-      // Save settings
+      // 1. Save settings
       await setDoc(doc(db, 'settings', 'system'), {
         currentAcademicYear: academicYearStr,
         setupComplete: true,
         updatedAt: serverTimestamp()
       });
 
-      // Save classrooms
-      const classroomPromises = classrooms.map(c => 
-        addDoc(collection(db, 'classrooms'), {
+      // 2. Save classrooms and get IDs
+      const classroomIds: string[] = [];
+      for (const c of classrooms) {
+        const docRef = await addClassroom({
           roomName: c.roomName,
           roomType: c.roomType,
           status: 'Available',
-          createdAt: serverTimestamp()
-        })
-      );
-      const classroomRefs = await Promise.all(classroomPromises);
-      const firstClassroomId = classroomRefs.length > 0 ? classroomRefs[0].id : 'unassigned';
+          gradeLevel: '1' // Default during setup
+        });
+        if (docRef) classroomIds.push(docRef);
+      }
 
-      // Save sections
-      const sectionPromises = sections.map(s => 
-        addDoc(collection(db, 'sections'), {
+      const firstClassroomId = classroomIds.length > 0 ? classroomIds[0] : 'unassigned';
+
+      // 3. Save sections
+      for (const s of sections) {
+        await addSection({
           name: s.name,
           classroomId: firstClassroomId,
           status: 'Active',
-          createdAt: serverTimestamp()
-        })
-      );
-      await Promise.all(sectionPromises);
+          gradeLevel: '1' // Default
+        });
+      }
 
-      // Save subjects
-      const subjectPromises = subjects.map(s => 
-        addDoc(collection(db, 'subjects'), {
+      // 4. Save subjects
+      for (const s of subjects) {
+        await addSubject({
           name: s.name,
           code: s.code,
           gradeLevel: s.gradeLevel,
           units: s.units,
           academicYear: academicYearStr,
-          status: 'Active',
-          createdAt: serverTimestamp()
-        })
-      );
-      await Promise.all(subjectPromises);
+          status: 'Active'
+        });
+      }
 
       setSetupComplete(true);
     } catch (error) {
@@ -102,34 +106,55 @@ export function SetupWizard() {
     })
   };
   return (
-    <div className="fixed inset-0 z-50 bg-background flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+    <div className="fixed inset-0 z-50 bg-gradient-to-br from-slate-50 via-white to-primary/5 flex items-center justify-center p-4">
+      {/* Premium grid background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px]"></div>
+      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-100/40 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="w-full max-w-2xl relative z-10">
+        {/* Logo header */}
         <div className="mb-8 flex justify-center">
-          <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
+          <div className="flex items-center gap-3 bg-white/80 backdrop-blur-sm px-5 py-3 rounded-2xl shadow-sm border border-slate-200/60">
             <img
               src="/pasted-image.jpg"
               alt="Logo"
-              className="w-8 h-8 rounded-full object-cover" />
-            
-            <span>Sta. Maria Admin Setup</span>
+              className="w-9 h-9 rounded-xl object-cover shadow-sm border border-slate-200/60"
+            />
+            <div className="leading-tight">
+              <p className="font-bold text-slate-900 text-base tracking-tight">Sta. Maria Admin Setup</p>
+              <p className="text-xs text-slate-400 font-medium">Initial System Configuration</p>
+            </div>
           </div>
         </div>
 
-        <div className="flex justify-between mb-8 px-4 relative">
-          <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-border -z-10 -translate-y-1/2"></div>
-          {[1, 2, 3, 4, 5].map((i) =>
-          <div
-            key={i}
-            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${step >= i ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground border border-border'}`}>
-            
-              {step > i ? <CheckCircle2 className="w-4 h-4" /> : i}
+        {/* Step progress indicator */}
+        <div className="flex items-center justify-center mb-8 px-4 gap-0">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex items-center">
+              <div
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 shadow-sm ${
+                  step > i
+                    ? 'bg-emerald-500 text-white shadow-emerald-200'
+                    : step === i
+                    ? 'bg-primary text-primary-foreground shadow-primary/20 scale-110'
+                    : 'bg-white text-slate-400 border-2 border-slate-200'
+                }`}
+              >
+                {step > i ? <CheckCircle2 className="w-4 h-4" /> : i}
+              </div>
+              {i < 5 && (
+                <div
+                  className={`h-1 w-10 sm:w-16 rounded-full transition-all duration-500 ${
+                    step > i ? 'bg-emerald-400' : 'bg-slate-200'
+                  }`}
+                />
+              )}
             </div>
-          )}
+          ))}
         </div>
 
-        <Card className="bg-card border-border shadow-lg overflow-hidden relative min-h-[400px]">
+        <Card className="bg-white/80 backdrop-blur-sm border-slate-200/60 shadow-xl shadow-slate-200/50 overflow-hidden relative min-h-[420px] rounded-3xl">
           <AnimatePresence mode="wait" custom={1}>
             {step === 1 &&
             <motion.div
@@ -155,28 +180,30 @@ export function SetupWizard() {
                     <div className="space-y-2">
                       <Label>Start Year</Label>
                       <Input
-                      type="number"
-                      value={sy.startYear}
-                      onChange={(e) =>
-                      setSy({
-                        ...sy,
-                        startYear: e.target.value
-                      })
-                      }
-                      placeholder="e.g. 2025" />
+                        type="text"
+                        inputMode="numeric"
+                        value={sy.startYear}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*$/.test(val)) {
+                            setSy({ ...sy, startYear: val });
+                          }
+                        }}
+                        placeholder="e.g. 2025" />
                     </div>
                     <div className="space-y-2">
                       <Label>End Year</Label>
                       <Input
-                      type="number"
-                      value={sy.endYear}
-                      onChange={(e) =>
-                      setSy({
-                        ...sy,
-                        endYear: e.target.value
-                      })
-                      }
-                      placeholder="e.g. 2026" />
+                        type="text"
+                        inputMode="numeric"
+                        value={sy.endYear}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*$/.test(val)) {
+                            setSy({ ...sy, endYear: val });
+                          }
+                        }}
+                        placeholder="e.g. 2026" />
                     </div>
                   </div>
                 </div>
@@ -233,7 +260,7 @@ export function SetupWizard() {
                           value={c.roomType}
                           onChange={(e) => {
                             const newC = [...classrooms];
-                            newC[i].roomType = e.target.value;
+                            newC[i].roomType = e.target.value as 'Lecture' | 'Laboratory' | 'Multipurpose';
                             setLocalClassrooms(newC);
                           }}
                         >
@@ -409,13 +436,17 @@ export function SetupWizard() {
                       <div className="space-y-2">
                         <Label>Units</Label>
                         <Input
-                      type="number"
-                      value={s.units}
-                      onChange={(e) => {
-                        const newS = [...subjects];
-                        newS[i].units = parseInt(e.target.value) || 0;
-                        setLocalSubjects(newS);
-                      }} />
+                        type="text"
+                        inputMode="numeric"
+                        value={s.units.toString()}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*$/.test(val)) {
+                            const newS = [...subjects];
+                            newS[i].units = parseInt(val) || 0;
+                            setLocalSubjects(newS);
+                          }
+                        }} />
                       </div>
                     </div>
                 )}

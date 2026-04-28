@@ -57,6 +57,8 @@ function ParentPortalContent() {
         return <ParentDashboardView onNavigate={handleNavigate} />;
     }
   };
+  const uData = userData as Record<string, string> | null;
+
   const SidebarContent = () =>
   <>
       <div className="h-16 flex items-center justify-between px-6 border-b border-border shrink-0">
@@ -147,14 +149,14 @@ function ParentPortalContent() {
         onClick={() => navigate('/')}>
         
           <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 uppercase">
-            {userData?.firstName?.charAt(0) || 'P'}{userData?.lastName?.charAt(0) || 'U'}
+            {uData?.firstName?.charAt(0) || 'P'}{uData?.lastName?.charAt(0) || 'U'}
           </div>
           <div className="flex-1 overflow-hidden">
             <p className="text-sm font-bold truncate text-slate-900">
-              {userData?.firstName} {userData?.lastName}
+              {uData?.firstName} {uData?.lastName}
             </p>
             <p className="text-[10px] text-muted-foreground truncate font-medium uppercase tracking-wider">
-              {userData?.relationship || 'Parent'} • {userData?.email}
+              {uData?.relationship || 'Parent'} • {uData?.email}
             </p>
           </div>
           <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />

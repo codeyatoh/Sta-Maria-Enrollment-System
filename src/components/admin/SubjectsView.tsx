@@ -27,35 +27,31 @@ import {
   SelectValue } from
 '../ui/Select';
 import { Badge } from '../ui/Badge';
-import { Plus, BookOpen, GraduationCap, Layers, Edit, Trash2, Eye, Calendar, Filter } from 'lucide-react';
-import { Subject } from '../../lib/adminData';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
-import { useEffect } from 'react';
+import { Plus, BookOpen, Edit, Trash2, Eye, Calendar, Filter } from 'lucide-react';
+import { useAdminData, Subject } from '../../lib/adminData';
 import { cn } from '../ui/utils';
+
 export function SubjectsView() {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const { 
+    subjects, 
+    addSubject, 
+    updateSubject, 
+    deleteSubject, 
+    loading 
+  } = useAdminData();
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    const unsub = onSnapshot(query(collection(db, 'subjects')), (snapshot) => {
-      const subjectData: Subject[] = [];
-      snapshot.forEach((d) => {
-        subjectData.push({ id: d.id, ...d.data() } as Subject);
-      });
-      subjectData.sort((a, b) => {
-        const timeA = (a.createdAt as any)?.toMillis ? (a.createdAt as any).toMillis() : (a.createdAt ? new Date(a.createdAt as string).getTime() : 0);
-        const timeB = (b.createdAt as any)?.toMillis ? (b.createdAt as any).toMillis() : (b.createdAt ? new Date(b.createdAt as string).getTime() : 0);
-        return timeB - timeA;
-      });
-      setSubjects(subjectData);
-    });
-    return () => unsub();
-  }, []);
+  const getDateString = (ts: unknown) => {
+    if (!ts) return 'N/A';
+    if (typeof ts === 'object' && 'toDate' in ts && typeof (ts as { toDate?: () => Date }).toDate === 'function') {
+      return (ts as { toDate: () => Date }).toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    return new Date(ts as string | number | Date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
   const handleDeleteSubject = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'subjects', id));
+      await deleteSubject(id);
     } catch (error) {
       console.error("Error deleting subject:", error);
     }
@@ -77,15 +73,13 @@ export function SubjectsView() {
     status: 'Active' as 'Active' | 'Inactive',
     academicYear: '2024-2025'
   });
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSaving) return;
     setIsSaving(true);
     try {
-      await addDoc(collection(db, 'subjects'), {
-        ...newSubject,
-        createdAt: serverTimestamp()
-      });
+      await addSubject(newSubject);
       setIsOpen(false);
       setNewSubject({
         name: '',
@@ -108,7 +102,7 @@ export function SubjectsView() {
       setIsSaving(true);
       try {
         const { id, ...dataToUpdate } = editingSubject;
-        await updateDoc(doc(db, 'subjects', id), dataToUpdate);
+        await updateSubject(id, dataToUpdate);
         setIsEditOpen(false);
       } catch (error) {
         console.error("Error updating subject: ", error);
@@ -117,24 +111,33 @@ export function SubjectsView() {
       }
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full">
-      <header className="h-auto sm:h-20 py-4 sm:py-0 flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 lg:px-8 border-b border-border shrink-0 bg-background/50 backdrop-blur-sm gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-lg font-bold tracking-tight text-slate-900">
-            Subjects Management
-          </h1>
-          <p className="text-xs text-slate-500 font-medium flex items-center gap-2">
-            <Calendar className="w-3 h-3" />
-            Managing subjects {selectedYear === 'All' ? 'across all academic years' : `for Academic Year ${selectedYear}`}
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
-            <div className="pl-2">
-              <Filter className="w-3.5 h-3.5 text-slate-400" />
+    <div className="flex flex-col h-full bg-slate-50/50">
+      <header className="px-6 py-8 border-b border-border bg-gradient-to-r from-primary/5 via-primary/10 to-transparent shrink-0">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 max-w-7xl mx-auto w-full">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-primary">
+              <BookOpen className="w-6 h-6" />
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Subjects Management</h1>
             </div>
+            <p className="text-sm text-slate-600 max-w-md leading-relaxed flex items-center gap-2">
+              <Calendar className="w-3.5 h-3.5 shrink-0" />
+              Managing subjects {selectedYear === 'All' ? 'across all academic years' : `for Academic Year ${selectedYear}`}
+            </p>
+          </div>
+        
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2 bg-white border border-slate-200 shadow-sm px-3 py-1.5 rounded-xl">
+            <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger className="h-8 border-none bg-transparent shadow-none w-[140px] text-xs font-bold">
                 <SelectValue placeholder="Academic Year" />
@@ -150,7 +153,7 @@ export function SubjectsView() {
 
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-full px-5 h-9 shadow-sm w-full sm:w-auto">
+            <Button className="w-full sm:w-auto rounded-xl px-6 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm font-semibold transition-all">
               <Plus className="w-4 h-4 mr-2" /> Add Subject
             </Button>
           </DialogTrigger>
@@ -194,10 +197,16 @@ export function SubjectsView() {
                 <div className="space-y-2">
                   <Label>Subject Units</Label>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     required
-                    value={newSubject.units}
-                    onChange={(e) => setNewSubject({ ...newSubject, units: parseInt(e.target.value) || 0 })}
+                    value={newSubject.units.toString()}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || /^\d*$/.test(val)) {
+                        setNewSubject({ ...newSubject, units: parseInt(val) || 0 });
+                      }
+                    }}
                     placeholder="e.g. 3"
                     className="h-9"
                   />
@@ -207,7 +216,7 @@ export function SubjectsView() {
                 <Label>Initial Status</Label>
                 <Select
                   value={newSubject.status}
-                  onValueChange={(v: any) => setNewSubject({ ...newSubject, status: v })}>
+                  onValueChange={(v) => setNewSubject({ ...newSubject, status: v as 'Active' | 'Inactive' })}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Active">Active</SelectItem>
@@ -219,25 +228,33 @@ export function SubjectsView() {
                 <Label>Academic Year</Label>
                 <div className="flex items-center gap-2">
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     required
                     placeholder="Start"
                     value={newSubject.academicYear.split('-')[0] || ''}
                     onChange={(e) => {
-                      const end = newSubject.academicYear.split('-')[1] || '';
-                      setNewSubject({ ...newSubject, academicYear: `${e.target.value}-${end}` });
+                      const val = e.target.value;
+                      if (val === '' || /^\d*$/.test(val)) {
+                        const end = newSubject.academicYear.split('-')[1] || '';
+                        setNewSubject({ ...newSubject, academicYear: `${val}-${end}` });
+                      }
                     }}
                     className="h-9"
                   />
                   <span className="text-muted-foreground">-</span>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     required
                     placeholder="End"
                     value={newSubject.academicYear.split('-')[1] || ''}
                     onChange={(e) => {
-                      const start = newSubject.academicYear.split('-')[0] || '';
-                      setNewSubject({ ...newSubject, academicYear: `${start}-${e.target.value}` });
+                      const val = e.target.value;
+                      if (val === '' || /^\d*$/.test(val)) {
+                        const start = newSubject.academicYear.split('-')[0] || '';
+                        setNewSubject({ ...newSubject, academicYear: `${start}-${val}` });
+                      }
                     }}
                     className="h-9"
                   />
@@ -260,33 +277,22 @@ export function SubjectsView() {
           </DialogContent>
         </Dialog>
         </div>
+        </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        <Card className="bg-card border-border rounded-xl overflow-hidden shadow-sm max-w-4xl mx-auto sm:mx-0">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <Card className="bg-white border-slate-200/60 rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader className="bg-muted/50 border-b border-border">
-                <TableRow className="hover:bg-transparent border-none">
-                  <TableHead className="w-12 text-center font-bold text-slate-400">#</TableHead>
-                  <TableHead className="font-semibold text-foreground whitespace-nowrap">
-                    Subject Name
-                  </TableHead>
-                  <TableHead className="font-semibold text-foreground whitespace-nowrap">
-                    Subject Code
-                  </TableHead>
-                  <TableHead className="font-semibold text-foreground whitespace-nowrap">
-                    Grade Level
-                  </TableHead>
-                  <TableHead className="font-semibold text-foreground whitespace-nowrap">
-                    Initial Status
-                  </TableHead>
-                  <TableHead className="font-semibold text-foreground whitespace-nowrap">
-                    Date Created
-                  </TableHead>
-                  <TableHead className="text-right pr-6 font-semibold text-foreground">
-                    Actions
-                  </TableHead>
+              <TableHeader className="bg-slate-50/80 border-b border-slate-200">
+                <TableRow className="hover:bg-transparent border-none h-12">
+                  <TableHead className="w-12 text-center font-bold text-slate-400 text-[10px] uppercase tracking-widest">#</TableHead>
+                  <TableHead className="font-bold text-slate-500 whitespace-nowrap text-[10px] uppercase tracking-widest">Subject Name</TableHead>
+                  <TableHead className="font-bold text-slate-500 whitespace-nowrap text-[10px] uppercase tracking-widest">Code</TableHead>
+                  <TableHead className="font-bold text-slate-500 whitespace-nowrap text-[10px] uppercase tracking-widest">Grade</TableHead>
+                  <TableHead className="font-bold text-slate-500 whitespace-nowrap text-[10px] uppercase tracking-widest">Status</TableHead>
+                  <TableHead className="font-bold text-slate-500 whitespace-nowrap text-[10px] uppercase tracking-widest">Date Created</TableHead>
+                  <TableHead className="text-right pr-6 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -307,7 +313,7 @@ export function SubjectsView() {
                   .map((subject, index) =>
                 <TableRow
                   key={subject.id}
-                  className="border-b border-border/50 hover:bg-muted/30 transition-colors group">
+                  className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors group h-14">
                   
                       <TableCell className="text-center font-medium text-slate-400">
                         {index + 1}
@@ -334,7 +340,7 @@ export function SubjectsView() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-slate-500 text-sm">
-                        {subject.createdAt ? (subject.createdAt as any)?.toDate ? (subject.createdAt as any).toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date(subject.createdAt as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                        {getDateString(subject.createdAt)}
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <div className="flex items-center justify-end gap-1">
@@ -372,6 +378,7 @@ export function SubjectsView() {
           </div>
         </Card>
       </div>
+
 
       {/* Edit Subject Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
@@ -416,9 +423,15 @@ export function SubjectsView() {
                 <div className="space-y-2">
                   <Label>Units</Label>
                   <Input
-                    type="number"
-                    value={editingSubject.units}
-                    onChange={(e) => setEditingSubject({ ...editingSubject, units: parseInt(e.target.value) || 0 })}
+                    type="text"
+                    inputMode="numeric"
+                    value={editingSubject.units.toString()}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || /^\d*$/.test(val)) {
+                        setEditingSubject({ ...editingSubject, units: parseInt(val) || 0 });
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -426,25 +439,33 @@ export function SubjectsView() {
                 <Label>Academic Year</Label>
                 <div className="flex items-center gap-2">
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     required
                     placeholder="Start"
                     value={editingSubject.academicYear.split('-')[0] || ''}
                     onChange={(e) => {
-                      const end = editingSubject.academicYear.split('-')[1] || '';
-                      setEditingSubject({ ...editingSubject, academicYear: `${e.target.value}-${end}` });
+                      const val = e.target.value;
+                      if (val === '' || /^\d*$/.test(val)) {
+                        const end = editingSubject.academicYear.split('-')[1] || '';
+                        setEditingSubject({ ...editingSubject, academicYear: `${val}-${end}` });
+                      }
                     }}
                     className="h-9"
                   />
                   <span className="text-muted-foreground">-</span>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     required
                     placeholder="End"
                     value={editingSubject.academicYear.split('-')[1] || ''}
                     onChange={(e) => {
-                      const start = editingSubject.academicYear.split('-')[0] || '';
-                      setEditingSubject({ ...editingSubject, academicYear: `${start}-${e.target.value}` });
+                      const val = e.target.value;
+                      if (val === '' || /^\d*$/.test(val)) {
+                        const start = editingSubject.academicYear.split('-')[0] || '';
+                        setEditingSubject({ ...editingSubject, academicYear: `${start}-${val}` });
+                      }
                     }}
                     className="h-9"
                   />
@@ -454,7 +475,7 @@ export function SubjectsView() {
                 <Label>Status</Label>
                 <Select
                   value={editingSubject.status}
-                  onValueChange={(v: any) => setEditingSubject({ ...editingSubject, status: v })}>
+                  onValueChange={(v) => setEditingSubject({ ...editingSubject, status: v as 'Active' | 'Inactive' })}>
                   <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Active">Active</SelectItem>
@@ -515,7 +536,7 @@ export function SubjectsView() {
                 <div className="p-3 rounded-xl border border-slate-100">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Created At</p>
                   <p className="font-bold text-slate-700">
-                    {viewingSubject.createdAt ? (viewingSubject.createdAt as any)?.toDate ? (viewingSubject.createdAt as any).toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date(viewingSubject.createdAt as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                    {getDateString(viewingSubject.createdAt)}
                   </p>
                 </div>
               </div>

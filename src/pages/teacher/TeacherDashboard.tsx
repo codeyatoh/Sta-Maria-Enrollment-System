@@ -35,9 +35,10 @@ function TeacherDashboardContent() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   
-  const initials = userData ? `${userData.firstName?.charAt(0) || ''}${userData.lastName?.charAt(0) || ''}`.toUpperCase() : 'T';
-  const fullName = userData ? `${userData.firstName} ${userData.lastName}` : 'Teacher';
-  const userRole = userData?.role || 'teacher';
+  const uData = userData as Record<string, string> | null;
+  const initials = uData ? `${uData.firstName?.charAt(0) || ''}${uData.lastName?.charAt(0) || ''}`.toUpperCase() : 'T';
+  const fullName = uData ? `${uData.firstName} ${uData.lastName}` : 'Teacher';
+  const userRole = uData?.role || 'teacher';
   const pendingCount = students.filter((s) => s.status === 'Pending').length;
 
   const handleLogout = async () => {
@@ -127,7 +128,7 @@ function TeacherDashboardContent() {
           <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs shrink-0">{initials}</div>
           <div className="flex-1 overflow-hidden">
             <p className="text-sm font-bold truncate text-slate-900">{fullName}</p>
-            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground truncate">{userRole}</p>
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground truncate">{userRole as string}</p>
           </div>
           {showUserMenu ? (
             <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />

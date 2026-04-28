@@ -59,9 +59,17 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
       learningMode: 'Blended' as 'Modular Print' | 'Digital' | 'Blended'
     }
   });
-  const handleSubmit = () => {
-    addChild(formData);
-    onComplete();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      await addChild(formData);
+      onComplete();
+    } catch (error) {
+      console.error("Error adding child:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   const slideVariants = {
     enter: (direction: number) => ({
@@ -80,28 +88,63 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
     })
   };
   return (
-    <div className="flex flex-col h-full bg-muted/30">
-      <header className="h-16 flex items-center justify-center px-4 sm:px-8 border-b border-border shrink-0 bg-background/50 backdrop-blur-sm">
-        <h1 className="text-lg font-semibold tracking-tight">
-          New Student Enrollment
-        </h1>
+    <div className="flex flex-col h-full bg-slate-50/50">
+      <header className="px-6 py-5 border-b border-border bg-gradient-to-r from-primary/5 via-primary/10 to-transparent shrink-0">
+        <div className="max-w-3xl mx-auto w-full flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shadow-inner border border-primary/20">
+              {step}
+            </div>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight text-slate-900">New Student Enrollment</h1>
+              <p className="text-xs text-slate-500 font-medium">Step {step} of 5</p>
+            </div>
+          </div>
+          <div className="hidden sm:flex items-center gap-1.5">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                    step > i
+                      ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-200'
+                      : step === i
+                      ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30'
+                      : 'bg-slate-100 text-slate-400 border border-slate-200'
+                  }`}
+                >
+                  {step > i ? <CheckCircle2 className="w-3.5 h-3.5" /> : i}
+                </div>
+                {i < 5 && (
+                  <div className={`h-0.5 w-6 rounded-full transition-all duration-500 ${ step > i ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center">
         <div className="w-full max-w-3xl">
-          <div className="flex justify-between mb-8 px-2 sm:px-4 relative">
-            <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-border -z-10 -translate-y-1/2"></div>
-            {[1, 2, 3, 4, 5].map((i) =>
+          {/* Mobile step indicator */}
+          <div className="flex sm:hidden justify-between mb-6 px-2 relative">
+            <div className="absolute top-1/2 left-2 right-2 h-0.5 bg-slate-200 -z-10 -translate-y-1/2"></div>
             <div
-              key={i}
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${step >= i ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground border border-border'}`}>
-              
+              className="absolute top-1/2 left-2 h-0.5 bg-primary -z-10 -translate-y-1/2 transition-all duration-500"
+              style={{ width: `${((step - 1) / 4) * 100}%` }}
+            />
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
+                  step > i ? 'bg-emerald-500 text-white shadow-sm' : step === i ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-white text-slate-400 border border-slate-200'
+                }`}
+              >
                 {step > i ? <CheckCircle2 className="w-4 h-4" /> : i}
               </div>
-            )}
+            ))}
           </div>
 
-          <Card className="bg-card border-border shadow-sm overflow-hidden relative min-h-[500px]">
+          <Card className="bg-white border-slate-200/60 shadow-sm overflow-hidden relative min-h-[500px] rounded-3xl">
             <AnimatePresence mode="wait" custom={1}>
               {step === 1 &&
               <motion.div
@@ -424,33 +467,41 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                     <div className="space-y-2">
                       <Label>Height (cm)</Label>
                       <Input
-                      type="number"
-                      value={formData.medical.height}
-                      onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        medical: {
-                          ...formData.medical,
-                          height: e.target.value
-                        }
-                      })
-                      } />
+                        type="text"
+                        inputMode="decimal"
+                        value={formData.medical.height}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                            setFormData({
+                              ...formData,
+                              medical: {
+                                ...formData.medical,
+                                height: val
+                              }
+                            });
+                          }
+                        }} />
                     
                     </div>
                     <div className="space-y-2">
                       <Label>Weight (kg)</Label>
                       <Input
-                      type="number"
-                      value={formData.medical.weight}
-                      onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        medical: {
-                          ...formData.medical,
-                          weight: e.target.value
-                        }
-                      })
-                      } />
+                        type="text"
+                        inputMode="decimal"
+                        value={formData.medical.weight}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                            setFormData({
+                              ...formData,
+                              medical: {
+                                ...formData.medical,
+                                weight: val
+                              }
+                            });
+                          }
+                        }} />
                     
                     </div>
                     <div className="space-y-2 sm:col-span-2">
@@ -500,16 +551,22 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                     <div className="space-y-2">
                       <Label>Emergency Contact Phone</Label>
                       <Input
-                      value={formData.medical.emergencyPhone}
-                      onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        medical: {
-                          ...formData.medical,
-                          emergencyPhone: e.target.value
-                        }
-                      })
-                      } />
+                        type="text"
+                        inputMode="tel"
+                        value={formData.medical.emergencyPhone}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          // Allow numbers, spaces, and common phone symbols
+                          if (val === '' || /^[\d\s+\-()]*$/.test(val)) {
+                            setFormData({
+                              ...formData,
+                              medical: {
+                                ...formData.medical,
+                                emergencyPhone: val
+                              }
+                            });
+                          }
+                        }} />
                     </div>
                     <div className="space-y-2 sm:col-span-2">
                       <Label>Allergies (if any)</Label>
@@ -551,7 +608,7 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                                 id={`diag-${d}`}
                                 checked={formData.medical.diagnoses.includes(d)}
                                 onCheckedChange={(c) => {
-                                  const newDiags = !!c 
+                                  const newDiags = c 
                                     ? [...formData.medical.diagnoses, d]
                                     : formData.medical.diagnoses.filter(x => x !== d);
                                   setFormData({ ...formData, medical: { ...formData.medical, diagnoses: newDiags } });
@@ -587,7 +644,7 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                                 id={`man-${m}`}
                                 checked={formData.medical.manifestations.includes(m)}
                                 onCheckedChange={(c) => {
-                                  const newMans = !!c 
+                                  const newMans = c 
                                     ? [...formData.medical.manifestations, m]
                                     : formData.medical.manifestations.filter(x => x !== m);
                                   setFormData({ ...formData, medical: { ...formData.medical, manifestations: newMans } });
@@ -753,7 +810,7 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                       </p>
                       <Select
                         value={formData.additional.learningMode}
-                        onValueChange={(v: any) => setFormData({ ...formData, additional: { ...formData.additional, learningMode: v } })}
+                        onValueChange={(v) => setFormData({ ...formData, additional: { ...formData.additional, learningMode: v as 'Modular Print' | 'Digital' | 'Blended' } })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select learning mode" />
@@ -860,9 +917,10 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                     </Button>
                     <Button
                     onClick={handleSubmit}
-                    className="w-full sm:w-auto sm:px-8">
+                    className="w-full sm:w-auto sm:px-8"
+                    disabled={isSubmitting}>
                     
-                      Submit Enrollment
+                      {isSubmitting ? 'Submitting...' : 'Submit Enrollment'}
                     </Button>
                   </div>
                 </motion.div>

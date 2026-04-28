@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { Printer, X } from 'lucide-react';
-import { initialChildren } from '../../lib/parentData';
+
 
 interface SF1ReportDocumentProps {
   onClose: () => void;
@@ -11,7 +11,7 @@ interface SF1ReportDocumentProps {
 }
 
 export function SF1ReportDocument({ onClose, schoolYear = '2026-2027', gradeLevel = 'All', section = 'All Sections' }: SF1ReportDocumentProps) {
-  const children = initialChildren;
+  const children: any[] = [];
 
   const handlePrint = () => {
     window.print();
@@ -115,7 +115,7 @@ export function SF1ReportDocument({ onClose, schoolYear = '2026-2027', gradeLeve
             </thead>
             <tbody>
               {children && children.length > 0 ? (
-                children.map((child, i) => {
+                children.map((child: any, i: number) => {
                   // Calculate age roughly
                   const bdate = new Date(child.birthDate);
                   const juneFirst = new Date(new Date().getFullYear(), 5, 1);

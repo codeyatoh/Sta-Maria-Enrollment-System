@@ -1,6 +1,7 @@
 import React from "react";
 import { ChevronDown, Check } from "lucide-react";
 import { Slot } from "@radix-ui/react-slot";
+import { createPortal } from "react-dom";
 import { cn } from "../utils";
 
 interface SelectContextType {
@@ -8,12 +9,14 @@ interface SelectContextType {
   onValueChange?: (value: string) => void;
   open: boolean;
   setOpen: (open: boolean) => void;
+  triggerRef: React.MutableRefObject<HTMLButtonElement | null>;
   placeholder?: string;
 }
 
 const SelectContext = React.createContext<SelectContextType>({
   open: false,
-  setOpen: () => { /* empty */ }
+  setOpen: () => { /* empty */ },
+  triggerRef: { current: null } as React.MutableRefObject<HTMLButtonElement | null>
 });
 
 interface SelectProps {
@@ -28,10 +31,12 @@ const Select: React.FC<SelectProps> = ({ children, value, defaultValue, onValueC
   const [internalValue, setInternalValue] = React.useState(defaultValue ?? "");
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
   const controlledValue = value !== undefined ? value : internalValue;
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Close if click is outside both the container AND the portal dropdown
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setOpen(false);
       }
@@ -51,7 +56,7 @@ const Select: React.FC<SelectProps> = ({ children, value, defaultValue, onValueC
   };
 
   return (
-    <SelectContext.Provider value={{ value: controlledValue, onValueChange: handleChange, open, setOpen }}>
+    <SelectContext.Provider value={{ value: controlledValue, onValueChange: handleChange, open, setOpen, triggerRef }}>
       <div ref={containerRef} data-slot="select" className="relative inline-block w-full">
         {children}
       </div>
@@ -65,12 +70,20 @@ interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
   ({ className, size = "default", children, asChild = false, ...props }, ref) => {
-    const { open, setOpen } = React.useContext(SelectContext);
+    const { open, setOpen, triggerRef } = React.useContext(SelectContext);
     const Comp = asChild ? Slot : "button";
+    
+    const combinedRef = React.useMemo(() => {
+      return (node: HTMLButtonElement) => {
+        triggerRef.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      };
+    }, [ref, triggerRef]);
 
     return (
       <Comp
-        ref={ref}
+        ref={combinedRef}
         type="button"
         data-slot="select-trigger"
         data-size={size}
@@ -108,22 +121,41 @@ type SelectContentProps = React.HTMLAttributes<HTMLDivElement>
 
 const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
   ({ className, children, ...props }, ref) => {
-    const { open } = React.useContext(SelectContext);
-    if (!open) return null;
+    const { open, triggerRef } = React.useContext(SelectContext);
+    const [coords, setCoords] = React.useState<{ top: number; left: number; width: number } | null>(null);
 
-    return (
+    React.useLayoutEffect(() => {
+      if (open && triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        setCoords({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        });
+      }
+    }, [open, triggerRef]);
+
+    if (!open || !coords) return null;
+
+    return createPortal(
       <div
         ref={ref}
         data-slot="select-content"
+        style={{
+          position: "absolute",
+          top: `${coords.top + 4}px`,
+          left: `${coords.left}px`,
+          minWidth: `${coords.width}px`
+        }}
         className={cn(
-          "absolute top-full left-0 z-[102] mt-1 min-w-36 overflow-hidden rounded-lg bg-background border border-border text-popover-foreground shadow-md animate-in fade-in zoom-in-95 duration-100",
+          "z-[102] overflow-hidden rounded-lg bg-background border border-border text-popover-foreground shadow-md animate-in fade-in zoom-in-95 duration-100",
           className
         )}
         {...props}>
-        
         {children}
-      </div>);
-
+      </div>,
+      document.body
+    );
   }
 );
 SelectContent.displayName = "SelectContent";

@@ -44,48 +44,32 @@ import {
   UserCheck,
   Heart
 } from 'lucide-react';
+import { useAdminData, User } from '../../lib/adminData';
+import { db } from '../../lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, collection, onSnapshot, query } from 'firebase/firestore';
-import { db, firebaseConfig } from '../../lib/firebase';
-import { useAdminData, User } from '../../lib/adminData';
+import { firebaseConfig } from '../../lib/firebase';
 
 // Secondary app for admin to create users without being logged out
 const secondaryApp = getApps().find(app => app.name === 'Secondary') || initializeApp(firebaseConfig, 'Secondary');
 const secondaryAuth = getAuth(secondaryApp);
 export function UsersView() {
-  const { addUser, updateUser, deleteUser } = useAdminData() as { addUser: (u: User) => void, updateUser: (id: string, u: User) => void, deleteUser: (id: string) => void };
-  const [realUsers, setRealUsers] = useState<User[]>([]);
+  const { users, addUser, updateUser, deleteUser, loading } = useAdminData();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
+
+  const getDateString = (ts: unknown) => {
+    if (!ts) return 'N/A';
+    if (typeof ts === 'object' && 'toDate' in ts && typeof (ts as { toDate?: () => Date }).toDate === 'function') {
+      return (ts as { toDate: () => Date }).toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    return new Date(ts as string | number | Date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Fetch real users from Firestore
-  React.useEffect(() => {
-    const q = query(collection(db, 'users'));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const usersData: User[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        usersData.push({
-          id: doc.id,
-          firstName: data.firstName || '',
-          lastName: data.lastName || '',
-          gender: data.gender || 'Other',
-          contactNumber: data.contactNumber || '',
-          email: data.email || '',
-          role: data.role ? data.role.charAt(0).toUpperCase() + data.role.slice(1) : 'Parent',
-          status: data.status || 'Active',
-          createdAt: data.createdAt || new Date().toISOString()
-        } as User);
-      });
-      setRealUsers(usersData);
-    });
-
-    return () => unsubscribe();
-  }, []);
   const [statusFilter, setStatusFilter] = useState('All');
   
   const [newUser, setNewUser] = useState({
@@ -200,18 +184,26 @@ export function UsersView() {
 
   const [roleFilter, setRoleFilter] = useState('All');
   
-  const totalUsers = realUsers.length;
-  const teacherCount = realUsers.filter(u => u.role === 'Teacher').length;
-  const parentCount = realUsers.filter(u => u.role === 'Parent').length;
-  const activeCount = realUsers.filter(u => u.status === 'Active').length;
-
-  const filteredUsers = realUsers.filter((u) => {
+  const totalUsers = users.length;
+  const teacherCount = users.filter(u => u.role?.toLowerCase() === 'teacher').length;
+  const parentCount = users.filter(u => u.role?.toLowerCase() === 'parent').length;
+  const activeCount = users.filter(u => u.status === 'Active').length;
+  
+  const filteredUsers = users.filter((u) => {
     const fullName = `${u.firstName} ${u.lastName}`.toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'All' || u.status === statusFilter;
-    const matchesRole = roleFilter === 'All' || u.role === roleFilter;
+    const matchesRole = roleFilter === 'All' || u.role?.toLowerCase() === roleFilter.toLowerCase();
     return matchesSearch && matchesStatus && matchesRole;
   });
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const renderTable = () => {
     return (
@@ -248,7 +240,7 @@ export function UsersView() {
                     <TableCell className="whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 ring-1 ring-primary/5">
-                          {user.firstName[0]}{user.lastName[0]}
+                          {user.firstName?.charAt(0) || ''}{user.lastName?.charAt(0) || ''}
                         </div>
                         <div className="flex flex-col">
                           <span className="font-bold text-slate-900 text-sm leading-tight">{user.firstName} {user.lastName}</span>
@@ -278,7 +270,7 @@ export function UsersView() {
                       )}
                     </TableCell>
                     <TableCell className="text-slate-500 text-[13px] font-medium whitespace-nowrap">
-                      {new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      {getDateString(user.createdAt)}
                     </TableCell>
                     <TableCell className="text-right pr-6">
                       <div className="flex items-center justify-end gap-2">
@@ -319,17 +311,21 @@ export function UsersView() {
   };
   return (
     <div className="flex flex-col h-full bg-slate-50/50">
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-10 bg-slate-50/30">
-        {/* Header & Stats Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">System Users</h2>
-              <p className="text-sm text-slate-500 mt-1">Manage and monitor all school personnel and parent accounts.</p>
+      <header className="px-6 py-8 border-b border-border bg-gradient-to-r from-primary/5 via-primary/10 to-transparent shrink-0">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 max-w-7xl mx-auto w-full">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-primary">
+              <Users className="w-6 h-6" />
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">System Users</h1>
             </div>
+            <p className="text-sm text-slate-600 max-w-md leading-relaxed">
+              Manage and monitor all school personnel and parent accounts across the system.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
               <DialogTrigger asChild>
-                <Button className="rounded-xl px-6 h-11 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                <Button className="w-full sm:w-auto rounded-xl px-6 bg-primary shadow-sm hover:bg-primary/90 font-semibold transition-all">
                   <Plus className="w-4 h-4 mr-2" /> Add New Account
                 </Button>
               </DialogTrigger>
@@ -426,28 +422,43 @@ export function UsersView() {
               </DialogContent>
             </Dialog>
           </div>
+        </div>
+      </header>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto w-full">
+        {/* Header & Stats Section */}
+        <div className="space-y-8">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {[
               { label: 'Total Accounts', value: totalUsers, icon: Users, color: 'indigo' },
               { label: 'Teaching Staff', value: teacherCount, icon: GraduationCap, color: 'blue' },
               { label: 'Registered Parents', value: parentCount, icon: Heart, color: 'rose' },
               { label: 'Active Sessions', value: activeCount, icon: UserCheck, color: 'emerald' },
-            ].map((stat, i) => (
-              <Card key={i} className="relative group overflow-hidden border-none shadow-sm ring-1 ring-slate-200/60 bg-white p-0">
-                <div className="p-5 flex items-center gap-4">
-                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 transition-transform group-hover:scale-110`}>
-                    <stat.icon className="h-6 w-6" />
+            ].map((stat, i) => {
+              const colorClasses = ({
+                blue: 'from-blue-50 to-blue-100/50 border-blue-200/50 text-blue-600 bg-blue-200/50',
+                emerald: 'from-emerald-50 to-emerald-100/50 border-emerald-200/50 text-emerald-600 bg-emerald-200/50',
+                rose: 'from-rose-50 to-rose-100/50 border-rose-200/50 text-rose-600 bg-rose-200/50',
+                indigo: 'from-indigo-50 to-indigo-100/50 border-indigo-200/50 text-indigo-600 bg-indigo-200/50'
+              } as Record<string, string>)[stat.color || 'blue'] || 'from-blue-50 to-blue-100/50 border-blue-200/50 text-blue-600 bg-blue-200/50';
+
+              return (
+                <Card key={i} className={`bg-gradient-to-br ${colorClasses.split(' text-')[0]} p-6 rounded-2xl shadow-sm relative overflow-hidden transition-all hover:shadow-md`}>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-inner ${colorClasses.split(' bg-')[1]} text-${stat.color}-600`}>
+                      <stat.icon className="w-6 h-6" />
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
-                    <p className="text-2xl font-extrabold text-slate-900 tracking-tight">{stat.value}</p>
+                  <div className="space-y-1">
+                    <p className="text-3xl font-bold text-slate-800">{stat.value}</p>
+                    <p className="text-sm font-semibold uppercase tracking-wider text-slate-600">
+                      {stat.label}
+                    </p>
                   </div>
-                </div>
-                <div className={`absolute bottom-0 left-0 h-1 w-full bg-${stat.color}-500/10`} />
-                <div className={`absolute bottom-0 left-0 h-1 w-0 bg-${stat.color}-500 transition-all duration-500 group-hover:w-full`} />
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         </div>
 
@@ -607,7 +618,7 @@ export function UsersView() {
             <div className="space-y-6 pt-4">
               <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-xl border border-border">
                 <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold">
-                  {selectedUser.firstName[0]}{selectedUser.lastName[0]}
+                  {selectedUser.firstName?.charAt(0) || ''}{selectedUser.lastName?.charAt(0) || ''}
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold">{selectedUser.firstName} {selectedUser.lastName}</h3>
@@ -633,7 +644,7 @@ export function UsersView() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Member Since</p>
-                  <p className="font-medium">{selectedUser.createdAt}</p>
+                  <p className="font-medium">{getDateString(selectedUser.createdAt)}</p>
                 </div>
               </div>
               

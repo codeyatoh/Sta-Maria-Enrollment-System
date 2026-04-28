@@ -1,5 +1,17 @@
-/* eslint-disable react-refresh/only-export-components */
-import React, { useState, createContext, useContext, ReactNode } from 'react';
+import React, { useState, createContext, useContext, ReactNode, useEffect } from 'react';
+import { db } from './firebase';
+import { 
+  collection, 
+  onSnapshot, 
+  query, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  serverTimestamp,
+  orderBy
+} from 'firebase/firestore';
+
 export type SchoolYear = {
   id: string;
   name: string;
@@ -13,7 +25,7 @@ export type Classroom = {
   roomType: 'Lecture' | 'Laboratory' | 'Multipurpose';
   status: 'Available' | 'Full' | 'Maintenance';
   gradeLevel: string;
-  createdAt: string;
+  createdAt: unknown;
 };
 export type Section = {
   id: string;
@@ -29,7 +41,7 @@ export type Subject = {
   gradeLevel: string;
   units: number;
   status: 'Active' | 'Inactive';
-  createdAt: string;
+  createdAt: unknown;
   academicYear: string;
 };
 export type User = {
@@ -41,10 +53,10 @@ export type User = {
   gender: 'Male' | 'Female' | 'Other';
   contactNumber: string;
   email: string;
-  role: 'Teacher' | 'Parent';
+  role: 'Teacher' | 'Parent' | 'Admin';
   status: 'Active' | 'Pending';
   password?: string;
-  createdAt: string;
+  createdAt: unknown;
 };
 export type Assignment = {
   id: string;
@@ -56,124 +68,154 @@ type AdminContextType = {
   schoolYear: SchoolYear | null;
   setSchoolYear: (sy: SchoolYear | null) => void;
   classrooms: Classroom[];
-  addClassroom: (c: Omit<Classroom, 'id' | 'createdAt'>) => void;
-  updateClassroom: (id: string, updates: Partial<Classroom>) => void;
-  deleteClassroom: (id: string) => void;
+  addClassroom: (c: Omit<Classroom, 'id' | 'createdAt'>) => Promise<string>;
+  updateClassroom: (id: string, updates: Partial<Classroom>) => Promise<void>;
+  deleteClassroom: (id: string) => Promise<void>;
   sections: Section[];
-  addSection: (s: Omit<Section, 'id'>) => void;
-  updateSection: (id: string, updates: Partial<Section>) => void;
-  deleteSection: (id: string) => void;
+  addSection: (s: Omit<Section, 'id'>) => Promise<void>;
+  updateSection: (id: string, updates: Partial<Section>) => Promise<void>;
+  deleteSection: (id: string) => Promise<void>;
   subjects: Subject[];
-  addSubject: (s: Omit<Subject, 'id' | 'createdAt'>) => void;
-  updateSubject: (id: string, updates: Partial<Subject>) => void;
-  deleteSubject: (id: string) => void;
+  addSubject: (s: Omit<Subject, 'id' | 'createdAt'>) => Promise<void>;
+  updateSubject: (id: string, updates: Partial<Subject>) => Promise<void>;
+  deleteSubject: (id: string) => Promise<void>;
   users: User[];
-  addUser: (u: Omit<User, 'id' | 'createdAt'> & { id?: string; createdAt?: string }) => void;
-  updateUser: (id: string, updates: Partial<User>) => void;
-  deleteUser: (id: string) => void;
+  addUser: (u: Omit<User, 'id' | 'createdAt'> & { id?: string; createdAt?: unknown }) => Promise<void>;
+  updateUser: (id: string, updates: Partial<User>) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
   assignments: Assignment[];
-  addAssignment: (a: Omit<Assignment, 'id'>) => void;
-  deleteAssignment: (id: string) => void;
+  addAssignment: (a: Omit<Assignment, 'id'>) => Promise<void>;
+  deleteAssignment: (id: string) => Promise<void>;
   setupComplete: boolean;
   setSetupComplete: (val: boolean) => void;
   isSystemInitialized: boolean;
+  loading: boolean;
 };
-const initialUsers: User[] = [];
 
-const initialClassrooms: Classroom[] = [];
-const initialSections: Section[] = [];
-const initialSubjects: Subject[] = [];
-const initialAssignments: Assignment[] = [];
-
-const initialSchoolYear: SchoolYear = {
-  id: '1',
-  name: '2024-2025',
-  startDate: '2024-08-01',
-  endDate: '2025-05-31',
-  isActive: true
-};
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
+
 export function AdminDataProvider({ children }: {children: ReactNode;}) {
-  const [schoolYear, setSchoolYear] = useState<SchoolYear | null>(
-    initialSchoolYear
-  );
-  const [classrooms, setClassrooms] = useState<Classroom[]>(initialClassrooms);
-  const [sections, setSections] = useState<Section[]>(initialSections);
-  const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [assignments, setAssignments] =
-  useState<Assignment[]>(initialAssignments);
-  const [setupComplete, setSetupComplete] = useState<boolean>(true); // Starts true to show seeded data
-  const isSystemInitialized =
-  !!schoolYear &&
-  classrooms.length > 0 &&
-  sections.length > 0 &&
-  subjects.length > 0;
-  const addClassroom = (c: Omit<Classroom, 'id' | 'createdAt'>) =>
-  setClassrooms([
-  ...classrooms,
-  {
-    ...c,
-    id: Date.now().toString(),
-    createdAt: new Date().toISOString().split('T')[0]
-  }]
-  );
-  const addSection = (s: Omit<Section, 'id'>) =>
-  setSections([
-  ...sections,
-  {
-    ...s,
-    id: Date.now().toString()
-  }]
-  );
-  const updateClassroom = (id: string, updates: Partial<Classroom>) =>
-    setClassrooms(classrooms.map(c => c.id === id ? { ...c, ...updates } : c));
-  const deleteClassroom = (id: string) => {
-    setClassrooms(classrooms.filter(c => c.id !== id));
-    setSections(sections.filter(s => s.classroomId !== id));
-    setAssignments(assignments.filter(a => a.classroomId !== id));
+  const [schoolYear, setSchoolYear] = useState<SchoolYear | null>(null);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [setupComplete, setSetupComplete] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubClassrooms = onSnapshot(query(collection(db, 'classrooms')), (snap) => {
+      setClassrooms(snap.docs.map(d => ({ id: d.id, ...d.data() } as Classroom)));
+    });
+
+    const unsubSections = onSnapshot(query(collection(db, 'sections')), (snap) => {
+      setSections(snap.docs.map(d => ({ id: d.id, ...d.data() } as Section)));
+    });
+
+    const unsubSubjects = onSnapshot(query(collection(db, 'subjects'), orderBy('createdAt', 'desc')), (snap) => {
+      setSubjects(snap.docs.map(d => ({ id: d.id, ...d.data() } as Subject)));
+    });
+
+    const unsubUsers = onSnapshot(query(collection(db, 'users')), (snap) => {
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() } as User)));
+    });
+
+    const unsubAssignments = onSnapshot(query(collection(db, 'assignments')), (snap) => {
+      setAssignments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Assignment)));
+    });
+
+    const unsubSchoolYears = onSnapshot(query(collection(db, 'school_years')), (snap) => {
+      const sy = snap.docs.find(d => d.data().isActive);
+      if (sy) {
+        setSchoolYear({ id: sy.id, ...sy.data() } as SchoolYear);
+      } else {
+        // Fallback or default if none active
+        setSchoolYear({
+          id: 'default',
+          name: '2024-2025',
+          startDate: '2024-08-01',
+          endDate: '2025-05-31',
+          isActive: true
+        });
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      unsubClassrooms();
+      unsubSections();
+      unsubSubjects();
+      unsubUsers();
+      unsubAssignments();
+      unsubSchoolYears();
+    };
+  }, []);
+
+  const isSystemInitialized = classrooms.length > 0 && sections.length > 0 && subjects.length > 0;
+
+  const addClassroom = async (c: Omit<Classroom, 'id' | 'createdAt'>) => {
+    const docRef = await addDoc(collection(db, 'classrooms'), { ...c, createdAt: serverTimestamp() });
+    return docRef.id;
   };
-  const updateSection = (id: string, updates: Partial<Section>) =>
-    setSections(sections.map(s => s.id === id ? { ...s, ...updates } : s));
-  const deleteSection = (id: string) => {
-    setSections(sections.filter(s => s.id !== id));
-    setAssignments(assignments.filter(a => a.sectionId !== id));
+
+  const updateClassroom = async (id: string, updates: Partial<Classroom>) => {
+    await updateDoc(doc(db, 'classrooms', id), updates);
   };
-  const addSubject = (s: Omit<Subject, 'id' | 'createdAt'>) =>
-  setSubjects([
-  ...subjects,
-  {
-    ...s,
-    id: Date.now().toString(),
-    createdAt: new Date().toISOString().split('T')[0]
-  }]
-  );
-  const updateSubject = (id: string, updates: Partial<Subject>) =>
-    setSubjects(subjects.map(s => s.id === id ? { ...s, ...updates } : s));
-  const deleteSubject = (id: string) => {
-    setSubjects(subjects.filter(s => s.id !== id));
+
+  const deleteClassroom = async (id: string) => {
+    await deleteDoc(doc(db, 'classrooms', id));
   };
-  const addUser = (u: Omit<User, 'id' | 'createdAt'> & { id?: string; createdAt?: string }) =>
-  setUsers([
-  ...users,
-  {
-    ...u,
-    id: u.id || Date.now().toString(),
-    createdAt: u.createdAt || new Date().toISOString().split('T')[0]
-  }]
-  );
-  const updateUser = (id: string, updates: Partial<User>) =>
-    setUsers(users.map(u => u.id === id ? { ...u, ...updates } : u));
-  const deleteUser = (id: string) => setUsers(users.filter((u) => u.id !== id));
-  const addAssignment = (a: Omit<Assignment, 'id'>) =>
-  setAssignments([
-  ...assignments,
-  {
-    ...a,
-    id: Date.now().toString()
-  }]
-  );
-  const deleteAssignment = (id: string) => setAssignments(assignments.filter(a => a.id !== id));
+
+  const addSection = async (s: Omit<Section, 'id'>) => {
+    await addDoc(collection(db, 'sections'), s);
+  };
+
+  const updateSection = async (id: string, updates: Partial<Section>) => {
+    await updateDoc(doc(db, 'sections', id), updates);
+  };
+
+  const deleteSection = async (id: string) => {
+    await deleteDoc(doc(db, 'sections', id));
+  };
+
+  const addSubject = async (s: Omit<Subject, 'id' | 'createdAt'>) => {
+    await addDoc(collection(db, 'subjects'), { ...s, createdAt: serverTimestamp() });
+  };
+
+  const updateSubject = async (id: string, updates: Partial<Subject>) => {
+    await updateDoc(doc(db, 'subjects', id), updates);
+  };
+
+  const deleteSubject = async (id: string) => {
+    await deleteDoc(doc(db, 'subjects', id));
+  };
+
+  const addUser = async (u: Omit<User, 'id' | 'createdAt'> & { id?: string; createdAt?: unknown }) => {
+    const { id, ...data } = u;
+    if (id) {
+      await updateDoc(doc(db, 'users', id), data);
+    } else {
+      await addDoc(collection(db, 'users'), { ...data, createdAt: serverTimestamp() });
+    }
+  };
+
+  const updateUser = async (id: string, updates: Partial<User>) => {
+    await updateDoc(doc(db, 'users', id), updates);
+  };
+
+  const deleteUser = async (id: string) => {
+    await deleteDoc(doc(db, 'users', id));
+  };
+
+  const addAssignment = async (a: Omit<Assignment, 'id'>) => {
+    await addDoc(collection(db, 'assignments'), a);
+  };
+
+  const deleteAssignment = async (id: string) => {
+    await deleteDoc(doc(db, 'assignments', id));
+  };
+
   return (
     <AdminContext.Provider
       value={{
@@ -200,13 +242,14 @@ export function AdminDataProvider({ children }: {children: ReactNode;}) {
         deleteAssignment,
         setupComplete,
         setSetupComplete,
-        isSystemInitialized
+        isSystemInitialized,
+        loading
       }}>
-      
       {children}
     </AdminContext.Provider>);
-
 }
+
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAdminData() {
   const context = useContext(AdminContext);
   if (context === undefined) {

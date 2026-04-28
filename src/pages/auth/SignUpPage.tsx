@@ -20,8 +20,7 @@ import {
   User,
   Phone,
   Mail,
-  Lock,
-  ArrowLeft
+  Lock
 } from 'lucide-react';
 
 import { useAuth } from '../../lib/AuthContext';
@@ -110,20 +109,21 @@ export function SignUpPage() {
 
       // Redirect to parent portal
       navigate('/parent');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       let message = "Failed to create account. Please try again.";
       
-      if (err.code === 'auth/email-already-in-use') {
+      const error = err as { code?: string; message?: string };
+      if (error.code === 'auth/email-already-in-use') {
         message = "This email is already registered. Please use another or sign in.";
-      } else if (err.code === 'auth/invalid-email') {
+      } else if (error.code === 'auth/invalid-email') {
         message = "Invalid email address format.";
-      } else if (err.code === 'auth/weak-password') {
+      } else if (error.code === 'auth/weak-password') {
         message = "Password is too weak. Please use at least 6 characters.";
-      } else if (err.code === 'auth/network-request-failed') {
+      } else if (error.code === 'auth/network-request-failed') {
         message = "Connection error. Please check your internet.";
-      } else if (err.message) {
-        message = err.message;
+      } else if (error.message) {
+        message = error.message;
       }
       
       setError(message);

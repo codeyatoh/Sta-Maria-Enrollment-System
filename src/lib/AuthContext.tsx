@@ -6,7 +6,7 @@ import { auth, db } from './firebase';
 interface AuthContextType {
   user: User | null;
   role: 'admin' | 'teacher' | 'parent' | null;
-  userData: any | null;
+  userData: Record<string, unknown> | null;
   loading: boolean;
 }
 
@@ -17,12 +17,13 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 });
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<'admin' | 'teacher' | 'parent' | null>(null);
-  const [userData, setUserData] = useState<any | null>(null);
+  const [userData, setUserData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

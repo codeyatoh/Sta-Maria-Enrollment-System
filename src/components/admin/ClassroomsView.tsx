@@ -19,11 +19,9 @@ import {
   SelectTrigger,
   SelectValue } from
 '../ui/Select';
-import { Plus, Home, Users, Layout, Shield, Info, Edit, Trash2, MoreHorizontal, UserMinus } from 'lucide-react';
-import { useAdminData, Classroom, Section, Assignment } from '../../lib/adminData';
+import { Plus, Home, Users, Edit, Trash2, UserMinus } from 'lucide-react';
+import { useAdminData, Classroom, Section } from '../../lib/adminData';
 import { cn } from '../ui/utils';
-import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 export function ClassroomsView() {
   const {
     classrooms,
@@ -37,8 +35,18 @@ export function ClassroomsView() {
     updateSection,
     deleteSection,
     addAssignment,
-    deleteAssignment
+    deleteAssignment,
+    loading
   } = useAdminData();
+
+  const getDateString = (ts: unknown) => {
+    if (!ts) return 'N/A';
+    if (typeof ts === 'object' && 'toDate' in ts && typeof (ts as { toDate?: () => Date }).toDate === 'function') {
+      return (ts as { toDate: () => Date }).toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    return new Date(ts as string | number | Date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
   const [isAddClassroomOpen, setIsAddClassroomOpen] = useState(false);
   const [newClassroom, setNewClassroom] = useState({
     roomName: '',
@@ -65,46 +73,12 @@ export function ClassroomsView() {
   const [isEditSectionOpen, setIsEditSectionOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
 
-  const [realClassrooms, setRealClassrooms] = useState<Classroom[]>([]);
-  const [realSections, setRealSections] = useState<Section[]>([]);
-  const [realAssignments, setRealAssignments] = useState<Assignment[]>([]);
-  const [realUsers, setRealUsers] = useState<any[]>([]); // Need to fetch users for the teachers dropdown
-  
-  // Fetch real data from Firestore
-  React.useEffect(() => {
-    const unsubClassrooms = onSnapshot(query(collection(db, 'classrooms')), (snap) => {
-      setRealClassrooms(snap.docs.map(d => ({ id: d.id, ...d.data() } as Classroom)));
-    });
-    
-    const unsubSections = onSnapshot(query(collection(db, 'sections')), (snap) => {
-      setRealSections(snap.docs.map(d => ({ id: d.id, ...d.data() } as Section)));
-    });
-
-    const unsubAssignments = onSnapshot(query(collection(db, 'assignments')), (snap) => {
-      setRealAssignments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Assignment)));
-    });
-
-    const unsubUsers = onSnapshot(query(collection(db, 'users')), (snap) => {
-      setRealUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-
-    return () => {
-      unsubClassrooms();
-      unsubSections();
-      unsubAssignments();
-      unsubUsers();
-    };
-  }, []);
-
-  const teachers = realUsers.filter((u) => u.role === 'teacher' || u.role === 'Teacher');
+  const teachers = users.filter((u) => u.role?.toLowerCase() === 'teacher');
 
   const handleAddClassroom = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, 'classrooms'), {
-        ...newClassroom,
-        createdAt: new Date().toISOString()
-      });
+      await addClassroom(newClassroom);
       setIsAddClassroomOpen(false);
       setNewClassroom({ roomName: '', roomType: 'Lecture', status: 'Available', gradeLevel: '' });
     } catch (err) {
@@ -115,7 +89,7 @@ export function ClassroomsView() {
   const handleAddSection = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, 'sections'), newSection);
+      await addSection(newSection);
       setIsAddSectionOpen(false);
       setNewSection({ name: '', classroomId: '', gradeLevel: '', status: 'Active' });
     } catch (err) {
@@ -128,7 +102,7 @@ export function ClassroomsView() {
     if (editingClassroom) {
       try {
         const { id, ...dataToUpdate } = editingClassroom;
-        await updateDoc(doc(db, 'classrooms', id), dataToUpdate);
+        await updateClassroom(id, dataToUpdate);
         setIsEditClassroomOpen(false);
       } catch (err) {
         console.error("Error updating classroom", err);
@@ -141,7 +115,7 @@ export function ClassroomsView() {
     if (editingSection) {
       try {
         const { id, ...dataToUpdate } = editingSection;
-        await updateDoc(doc(db, 'sections', id), dataToUpdate);
+        await updateSection(id, dataToUpdate);
         setIsEditSectionOpen(false);
       } catch (err) {
         console.error("Error updating section", err);
@@ -152,7 +126,7 @@ export function ClassroomsView() {
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, 'assignments'), newAssign);
+      await addAssignment(newAssign);
       setIsAssignOpen(false);
       setNewAssign({ teacherId: '', classroomId: '', sectionId: '' });
     } catch (err) {
@@ -160,31 +134,32 @@ export function ClassroomsView() {
     }
   };
 
-  const deleteClassroomFromDb = async (id: string) => {
-    try { await deleteDoc(doc(db, 'classrooms', id)); } catch(e) { console.error(e); }
-  };
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
-  const deleteSectionFromDb = async (id: string) => {
-    try { await deleteDoc(doc(db, 'sections', id)); } catch(e) { console.error(e); }
-  };
-
-  const deleteAssignmentFromDb = async (id: string) => {
-    try { await deleteDoc(doc(db, 'assignments', id)); } catch(e) { console.error(e); }
-  };
   return (
-    <div className="flex flex-col h-full">
-      <header className="h-auto sm:h-16 py-4 sm:py-0 flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 lg:px-8 border-b border-border shrink-0 bg-background/50 backdrop-blur-sm gap-4">
-        <h1 className="text-lg font-semibold tracking-tight">
-          Classrooms & Sections
-        </h1>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="flex flex-col h-full bg-slate-50/50">
+      <header className="px-6 py-8 border-b border-border bg-gradient-to-r from-primary/5 via-primary/10 to-transparent shrink-0">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 max-w-7xl mx-auto w-full">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-primary">
+              <Home className="w-6 h-6" />
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Classrooms & Sections</h1>
+            </div>
+            <p className="text-sm text-slate-600 max-w-md leading-relaxed">
+              Manage physical learning spaces, academic sections, and teacher assignments.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 shrink-0">
           <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
             <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="rounded-full px-5 h-9 w-full sm:w-auto">
-                
-                Assign Teacher
+              <Button className="w-full sm:w-auto rounded-xl px-5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm font-semibold transition-all">
+                <UserMinus className="w-4 h-4 mr-2" /> Assign Teacher
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
@@ -231,11 +206,11 @@ export function ClassroomsView() {
                     
                     <SelectTrigger>
                       <SelectValue placeholder="Select classroom">
-                        {newAssign.classroomId ? realClassrooms.find(c => c.id === newAssign.classroomId)?.roomName : undefined}
+                        {newAssign.classroomId ? classrooms.find(c => c.id === newAssign.classroomId)?.roomName : undefined}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {realClassrooms.map((c) =>
+                      {classrooms.map((c) =>
                         <SelectItem key={c.id} value={c.id}>
                           {c.roomName}
                         </SelectItem>
@@ -257,11 +232,11 @@ export function ClassroomsView() {
                     
                     <SelectTrigger>
                       <SelectValue placeholder="Select section">
-                        {newAssign.sectionId ? realSections.find(s => s.id === newAssign.sectionId)?.name : undefined}
+                        {newAssign.sectionId ? sections.find(s => s.id === newAssign.sectionId)?.name : undefined}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {realSections.
+                      {sections.
                       filter((s) => s.classroomId === newAssign.classroomId).
                       map((s) =>
                       <SelectItem key={s.id} value={s.id}>
@@ -290,10 +265,7 @@ export function ClassroomsView() {
 
           <Dialog open={isAddSectionOpen} onOpenChange={setIsAddSectionOpen}>
             <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="rounded-full px-5 h-9 w-full sm:w-auto">
-                
+              <Button className="w-full sm:w-auto rounded-xl px-5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm font-semibold transition-all">
                 <Plus className="w-4 h-4 mr-2" /> Add Section
               </Button>
             </DialogTrigger>
@@ -330,7 +302,7 @@ export function ClassroomsView() {
                     <Label>Status</Label>
                     <Select
                       value={newSection.status}
-                      onValueChange={(v: any) => setNewSection({ ...newSection, status: v })}>
+                      onValueChange={(v) => setNewSection({ ...newSection, status: v as 'Active' | 'Inactive' })}>
                       <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Active">Active</SelectItem>
@@ -352,11 +324,11 @@ export function ClassroomsView() {
                     
                     <SelectTrigger>
                       <SelectValue placeholder="Select classroom">
-                        {newSection.classroomId ? realClassrooms.find(c => c.id === newSection.classroomId)?.roomName : undefined}
+                        {newSection.classroomId ? classrooms.find(c => c.id === newSection.classroomId)?.roomName : undefined}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px] overflow-y-auto">
-                      {realClassrooms
+                      {classrooms
                         .filter(c => c.status === 'Available')
                         .map((c) =>
                         <SelectItem key={c.id} value={c.id}>
@@ -383,12 +355,9 @@ export function ClassroomsView() {
             </DialogContent>
           </Dialog>
 
-          <Dialog
-            open={isAddClassroomOpen}
-            onOpenChange={setIsAddClassroomOpen}>
-            
+          <Dialog open={isAddClassroomOpen} onOpenChange={setIsAddClassroomOpen}>
             <DialogTrigger asChild>
-              <Button className="rounded-full px-5 h-9 shadow-sm w-full sm:w-auto">
+              <Button className="w-full sm:w-auto rounded-xl px-6 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm font-semibold transition-all">
                 <Plus className="w-4 h-4 mr-2" /> Add Classroom
               </Button>
             </DialogTrigger>
@@ -411,7 +380,7 @@ export function ClassroomsView() {
                     <Label>Room Type</Label>
                     <Select
                       value={newClassroom.roomType}
-                      onValueChange={(v: any) => setNewClassroom({ ...newClassroom, roomType: v })}>
+                      onValueChange={(v) => setNewClassroom({ ...newClassroom, roomType: v as 'Lecture' | 'Laboratory' | 'Multipurpose' })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Type" />
                       </SelectTrigger>
@@ -426,7 +395,7 @@ export function ClassroomsView() {
                     <Label>Status</Label>
                     <Select
                       value={newClassroom.status}
-                      onValueChange={(v: any) => setNewClassroom({ ...newClassroom, status: v })}>
+                      onValueChange={(v) => setNewClassroom({ ...newClassroom, status: v as 'Available' | 'Full' | 'Maintenance' })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Status" />
                       </SelectTrigger>
@@ -477,7 +446,7 @@ export function ClassroomsView() {
                       <Label>Room Type</Label>
                       <Select
                         value={editingClassroom.roomType}
-                        onValueChange={(v: any) => setEditingClassroom({ ...editingClassroom, roomType: v })}>
+                        onValueChange={(v) => setEditingClassroom({ ...editingClassroom, roomType: v as 'Lecture' | 'Laboratory' | 'Multipurpose' })}>
                         <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Lecture">Lecture</SelectItem>
@@ -490,7 +459,7 @@ export function ClassroomsView() {
                       <Label>Status</Label>
                       <Select
                         value={editingClassroom.status}
-                        onValueChange={(v: any) => setEditingClassroom({ ...editingClassroom, status: v })}>
+                        onValueChange={(v) => setEditingClassroom({ ...editingClassroom, status: v as 'Available' | 'Full' | 'Maintenance' })}>
                         <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Available">Available</SelectItem>
@@ -545,7 +514,7 @@ export function ClassroomsView() {
                       <Label>Status</Label>
                       <Select
                         value={editingSection.status}
-                        onValueChange={(v: any) => setEditingSection({ ...editingSection, status: v })}>
+                        onValueChange={(v) => setEditingSection({ ...editingSection, status: v as 'Active' | 'Inactive' })}>
                         <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Active">Active</SelectItem>
@@ -560,10 +529,10 @@ export function ClassroomsView() {
                       value={editingSection.classroomId}
                       onValueChange={(v) => setEditingSection({ ...editingSection, classroomId: v })}>
                       <SelectTrigger><SelectValue placeholder="Select Classroom">
-                        {editingSection.classroomId ? realClassrooms.find(c => c.id === editingSection.classroomId)?.roomName : undefined}
+                        {editingSection.classroomId ? classrooms.find(c => c.id === editingSection.classroomId)?.roomName : undefined}
                       </SelectValue></SelectTrigger>
                       <SelectContent>
-                        {realClassrooms.map(c => (
+                        {classrooms.map(c => (
                           <SelectItem key={c.id} value={c.id}>{c.roomName}</SelectItem>
                         ))}
                       </SelectContent>
@@ -577,13 +546,14 @@ export function ClassroomsView() {
               )}
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-          {realClassrooms.map((classroom) => {
-            const classSections = realSections.filter(
+          {classrooms.map((classroom) => {
+            const classSections = sections.filter(
               (s) => s.classroomId === classroom.id
             );
             return (
@@ -617,7 +587,7 @@ export function ClassroomsView() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50"
-                        onClick={() => deleteClassroomFromDb(classroom.id)}
+                        onClick={() => deleteClassroom(classroom.id)}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
@@ -644,7 +614,7 @@ export function ClassroomsView() {
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Created Date</span>
                     <span className="text-xs font-semibold text-slate-600">
-                      {classroom.createdAt ? new Date(classroom.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                      {getDateString(classroom.createdAt)}
                     </span>
                   </div>
                   <div className="flex flex-col items-end">
@@ -660,7 +630,7 @@ export function ClassroomsView() {
                     </p> :
 
                   classSections.map((section) => {
-                    const assignment = realAssignments.find(
+                    const assignment = assignments.find(
                       (a) => a.sectionId === section.id
                     );
                     const teacher = assignment ?
@@ -697,7 +667,7 @@ export function ClassroomsView() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50"
-                                onClick={() => deleteSectionFromDb(section.id)}
+                                onClick={() => deleteSection(section.id)}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </Button>
@@ -715,7 +685,7 @@ export function ClassroomsView() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-6 w-6 rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 opacity-0 group-hover:opacity-100"
-                                  onClick={() => assignment && deleteAssignmentFromDb(assignment.id)}
+                                  onClick={() => assignment && deleteAssignment(assignment.id)}
                                   title="Remove Assignment"
                                 >
                                   <UserMinus className="w-3 h-3" />
