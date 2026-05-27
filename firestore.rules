@@ -28,9 +28,9 @@ service cloud.firestore {
     // ─── Collection Rules ────────────────────────────────────────────────────
 
     // Users
-    // Users can read their own profile; only Admins can write (e.g. assign roles).
+    // Users can read their own profile; Admins can read all and write.
     match /users/{uid} {
-      allow read: if isAuthed() && request.auth.uid == uid;
+      allow read: if isAuthed() && (request.auth.uid == uid || isAdmin());
       allow write: if isAdmin();
     }
     
@@ -56,13 +56,25 @@ service cloud.firestore {
       allow read, write: if isAdmin() || isTeacher();
     }
     
-    // Classes / Subjects
+    // Classrooms / Subjects / Sections / Assignments
     // Admins and Teachers can read and write class configurations.
-    match /classes/{doc} {
+    match /classrooms/{doc} {
+      allow read, write: if isAdmin() || isTeacher();
+    }
+    match /sections/{doc} {
+      allow read, write: if isAdmin() || isTeacher();
+    }
+    match /assignments/{doc} {
       allow read, write: if isAdmin() || isTeacher();
     }
     match /subjects/{doc} {
       allow read, write: if isAdmin() || isTeacher();
+    }
+    
+    // School Years
+    match /school_years/{doc} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
     }
     
     // Payments
