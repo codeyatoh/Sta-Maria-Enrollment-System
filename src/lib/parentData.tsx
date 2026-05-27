@@ -12,6 +12,19 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
+import {
+  PHASE2_SCHEMA_VERSION,
+  DocumentType,
+  EnrollmentDocument,
+  RequirementUploadMeta
+} from './schema/phase2';
+import {
+  mergeAttendanceWithCompatibility
+} from './services/attendanceCompatibilityService';
+import {
+  subscribeParentEnrollmentDocuments,
+  uploadEnrollmentRequirementDocument
+} from './services/enrollmentDocumentsService';
 
 export type AttendanceRecord = {
   date: string;
@@ -60,18 +73,30 @@ export type Child = {
   };
   status: 'Pending' | 'Enrolled' | 'Rejected';
   requirements: 'Complete' | 'Incomplete' | string;
+  requirementUploads?: {
+    psaBirthCertificate?: RequirementUploadMeta;
+    [key: string]: RequirementUploadMeta | undefined;
+  };
+  schemaVersion?: number;
   submittedAt: unknown;
   attendance: AttendanceRecord[];
 };
 type ParentContextType = {
   children: Child[];
+  documents: EnrollmentDocument[];
   addChild: (
   child: Omit<
     Child,
     'id' | 'status' | 'requirements' | 'submittedAt' | 'attendance' | 'parentId'>)
-  => Promise<void>;
+  => Promise<string>;
   updateChild: (id: string, updates: Partial<Child>) => Promise<void>;
+  uploadRequirementDocument: (params: {
+    enrollmentId: string;
+    documentType: DocumentType;
+    file: File;
+  }) => Promise<void>;
   loading: boolean;
+  documentsLoading: boolean;
 };
 
 const ParentContext = createContext<ParentContextType | undefined>(undefined);
@@ -79,49 +104,128 @@ const ParentContext = createContext<ParentContextType | undefined>(undefined);
 export function ParentDataProvider({ children: reactChildren }: {children: ReactNode;}) {
   const { user } = useAuth();
   const [children, setChildren] = useState<Child[]>([]);
+  const [documents, setDocuments] = useState<EnrollmentDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
       setChildren([]);
+      setDocuments([]);
       setLoading(false);
+      setDocumentsLoading(false);
       return;
     }
 
+    let currentChildren: Child[] = [];
+    const attendanceByStudent: Record<string, AttendanceRecord[]> = {};
+    const attendanceUnsubs: Array<() => void> = [];
+
+    const rebuildChildren = () => {
+      const merged = currentChildren.map((child) => ({
+        ...child,
+        attendance: mergeAttendanceWithCompatibility({
+          studentId: child.id,
+          canonicalEntries: Object.entries(attendanceByStudent).flatMap(([studentId, entries]) =>
+            entries.map((entry) => ({ studentId, ...entry }))
+          ),
+          legacyEntries: child.attendance
+        })
+      }));
+      setChildren(merged);
+    };
+
     const q = query(collection(db, 'enrollments'), where('parentId', '==', user.uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setChildren(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Child)));
+    const unsubscribeEnrollments = onSnapshot(q, (snapshot) => {
+      currentChildren = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Child));
+      rebuildChildren();
+
+      while (attendanceUnsubs.length > 0) {
+        const unsub = attendanceUnsubs.pop();
+        if (unsub) unsub();
+      }
+
+      currentChildren.forEach((child) => {
+        const attendanceQuery = query(collection(db, 'attendance'), where('studentId', '==', child.id));
+        const attendanceUnsub = onSnapshot(attendanceQuery, (attendanceSnapshot) => {
+          attendanceByStudent[child.id] = attendanceSnapshot.docs.map((d) => {
+            const row = d.data() as AttendanceRecord;
+            return { date: row.date, status: row.status };
+          });
+          rebuildChildren();
+        });
+        attendanceUnsubs.push(attendanceUnsub);
+      });
+
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    const unsubscribeDocuments = subscribeParentEnrollmentDocuments(user.uid, (rows) => {
+      setDocuments(rows);
+      setDocumentsLoading(false);
+    });
+
+    return () => {
+      unsubscribeEnrollments();
+      unsubscribeDocuments();
+      while (attendanceUnsubs.length > 0) {
+        const unsub = attendanceUnsubs.pop();
+        if (unsub) unsub();
+      }
+    };
   }, [user]);
 
   const addChild = async (
     childData: Omit<Child, 'id' | 'status' | 'requirements' | 'submittedAt' | 'attendance' | 'parentId'>
-  ) => {
-    if (!user) return;
-    await addDoc(collection(db, 'enrollments'), {
+  ): Promise<string> => {
+    if (!user) throw new Error("Not authenticated");
+    const docRef = await addDoc(collection(db, 'enrollments'), {
       ...childData,
       parentId: user.uid,
       status: 'Pending',
       requirements: 'Complete',
+      requirementUploads: {},
+      schemaVersion: PHASE2_SCHEMA_VERSION,
       submittedAt: serverTimestamp(),
       attendance: []
     });
+    return docRef.id;
   };
 
   const updateChild = async (id: string, updates: Partial<Child>) => {
     await updateDoc(doc(db, 'enrollments', id), updates);
   };
 
+  const uploadRequirementDocument = async (params: {
+    enrollmentId: string;
+    documentType: DocumentType;
+    file: File;
+  }) => {
+    if (!user) return;
+
+    const child = children.find((c) => c.id === params.enrollmentId);
+    if (!child) throw new Error('Student enrollment not found.');
+
+    await uploadEnrollmentRequirementDocument({
+      enrollmentId: params.enrollmentId,
+      parentId: user.uid,
+      studentName: `${child.firstName} ${child.lastName}`,
+      gradeLevel: child.gradeLevel,
+      documentType: params.documentType,
+      file: params.file
+    });
+  };
+
   return (
     <ParentContext.Provider
       value={{
         children,
+        documents,
         addChild,
         updateChild,
-        loading
+        uploadRequirementDocument,
+        loading,
+        documentsLoading
       }}>
       {reactChildren}
     </ParentContext.Provider>);

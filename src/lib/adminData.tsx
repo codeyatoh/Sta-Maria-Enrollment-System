@@ -37,7 +37,7 @@ export type Section = {
 export type Subject = {
   id: string;
   name: string;
-  code: string;
+  code?: string;
   gradeLevel: string;
   units: number;
   status: 'Active' | 'Inactive';

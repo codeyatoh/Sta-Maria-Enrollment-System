@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 
-import { CheckCircle2, CircleDashed, XCircle, ChevronRight, Users, GraduationCap, Activity } from 'lucide-react';
+import { CheckCircle2, CircleDashed, XCircle, ChevronRight, Users, GraduationCap } from 'lucide-react';
 import { useParentData } from '../../lib/parentData';
 
 export function MyChildrenView({

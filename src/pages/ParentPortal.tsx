@@ -18,6 +18,7 @@ import { ParentDashboardView } from '../components/parent/ParentDashboardView';
 import { MyChildrenView } from '../components/parent/MyChildrenView';
 import { EnrollmentForm } from '../components/parent/EnrollmentForm';
 import { ChildDetailView } from '../components/parent/ChildDetailView';
+import { RequirementsView } from '../components/parent/RequirementsView';
 import { useAuth } from '../lib/AuthContext';
 function ParentPortalContent() {
   const navigate = useNavigate();
@@ -43,14 +44,14 @@ function ParentPortalContent() {
       case 'children':
         return <MyChildrenView onSelectChild={handleSelectChild} />;
       case 'enrollment':
-        return <EnrollmentForm onComplete={() => handleNavigate('children')} />;
+        return <EnrollmentForm onComplete={() => handleNavigate('requirements')} />;
+      case 'requirements':
+        return <RequirementsView />;
       case 'child-detail':
         return selectedChildId ?
         <ChildDetailView
           childId={selectedChildId}
           onBack={() => handleNavigate('children')} /> :
-
-
         <MyChildrenView onSelectChild={handleSelectChild} />;
 
       default:
@@ -130,7 +131,9 @@ function ParentPortalContent() {
             Documents
           </p>
           <div className="space-y-1">
-            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-md transition-colors">
+            <button
+              onClick={() => handleNavigate('requirements')}
+              className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${activeView === 'requirements' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}`}>
               <FileText className="w-4 h-4 shrink-0" />
               Requirements
             </button>

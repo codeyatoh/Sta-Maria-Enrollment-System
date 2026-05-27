@@ -27,7 +27,7 @@ import {
   SelectValue } from
 '../ui/Select';
 import { Badge } from '../ui/Badge';
-import { Plus, BookOpen, Edit, Trash2, Eye, Calendar, Filter } from 'lucide-react';
+import { Plus, BookOpen, Edit, Trash2, Eye, Calendar, Filter, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAdminData, Subject } from '../../lib/adminData';
 import { cn } from '../ui/utils';
 
@@ -62,12 +62,14 @@ export function SubjectsView() {
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [viewingSubject, setViewingSubject] = useState<Subject | null>(null);
   const [selectedYear, setSelectedYear] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const uniqueYears = Array.from(new Set(subjects.map(s => s.academicYear))).sort().reverse();
 
   const [newSubject, setNewSubject] = useState({
     name: '',
-    code: '',
     gradeLevel: '1',
     units: 3,
     status: 'Active' as 'Active' | 'Inactive',
@@ -83,7 +85,6 @@ export function SubjectsView() {
       setIsOpen(false);
       setNewSubject({
         name: '',
-        code: '',
         gradeLevel: '1',
         units: 3,
         status: 'Active',
@@ -120,6 +121,15 @@ export function SubjectsView() {
     );
   }
 
+  const filteredSubjects = subjects.filter(s => {
+    const matchesYear = selectedYear === 'All' || s.academicYear === selectedYear;
+    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesYear && matchesSearch;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredSubjects.length / itemsPerPage));
+  const paginatedSubjects = filteredSubjects.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="flex flex-col h-full bg-slate-50/50">
       <header className="px-6 py-8 border-b border-border bg-gradient-to-r from-primary/5 via-primary/10 to-transparent shrink-0">
@@ -136,9 +146,22 @@ export function SubjectsView() {
           </div>
         
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2 bg-white border border-slate-200 shadow-sm px-3 py-1.5 rounded-xl relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3" />
+            <Input
+              type="text"
+              placeholder="Search subjects..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="h-8 border-none bg-transparent shadow-none pl-8 w-full text-sm focus-visible:ring-0"
+            />
+          </div>
           <div className="flex items-center gap-2 bg-white border border-slate-200 shadow-sm px-3 py-1.5 rounded-xl">
             <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <Select value={selectedYear} onValueChange={(val) => { setSelectedYear(val); setCurrentPage(1); }}>
               <SelectTrigger className="h-8 border-none bg-transparent shadow-none w-[140px] text-xs font-bold">
                 <SelectValue placeholder="Academic Year" />
               </SelectTrigger>
@@ -162,7 +185,7 @@ export function SubjectsView() {
               <DialogTitle>Add New Subject</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleAdd} className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label>Subject Name</Label>
                   <Input
@@ -170,14 +193,6 @@ export function SubjectsView() {
                     value={newSubject.name}
                     onChange={(e) => setNewSubject({ ...newSubject, name: e.target.value })}
                     placeholder="e.g. Mathematics" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Subject Code</Label>
-                  <Input
-                    required
-                    value={newSubject.code}
-                    onChange={(e) => setNewSubject({ ...newSubject, code: e.target.value })}
-                    placeholder="e.g. MATH101" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -288,7 +303,6 @@ export function SubjectsView() {
                 <TableRow className="hover:bg-transparent border-none h-12">
                   <TableHead className="w-12 text-center font-bold text-slate-400 text-[10px] uppercase tracking-widest">#</TableHead>
                   <TableHead className="font-bold text-slate-500 whitespace-nowrap text-[10px] uppercase tracking-widest">Subject Name</TableHead>
-                  <TableHead className="font-bold text-slate-500 whitespace-nowrap text-[10px] uppercase tracking-widest">Code</TableHead>
                   <TableHead className="font-bold text-slate-500 whitespace-nowrap text-[10px] uppercase tracking-widest">Grade</TableHead>
                   <TableHead className="font-bold text-slate-500 whitespace-nowrap text-[10px] uppercase tracking-widest">Status</TableHead>
                   <TableHead className="font-bold text-slate-500 whitespace-nowrap text-[10px] uppercase tracking-widest">Date Created</TableHead>
@@ -296,33 +310,29 @@ export function SubjectsView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {subjects.filter(s => selectedYear === 'All' || s.academicYear === selectedYear).length === 0 ?
+                {paginatedSubjects.length === 0 ?
                 <TableRow>
                     <TableCell
-                    colSpan={7}
+                    colSpan={6}
                     className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <BookOpen className="w-8 h-8 text-slate-200" />
-                        <p className="text-sm text-slate-400 font-medium">No subjects found{selectedYear !== 'All' && ` for A.Y. ${selectedYear}`}</p>
+                        <p className="text-sm text-slate-400 font-medium">No subjects found.</p>
                       </div>
                     </TableCell>
                   </TableRow> :
 
-                subjects
-                  .filter(s => selectedYear === 'All' || s.academicYear === selectedYear)
+                paginatedSubjects
                   .map((subject, index) =>
                 <TableRow
                   key={subject.id}
                   className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors group h-14">
                   
                       <TableCell className="text-center font-medium text-slate-400">
-                        {index + 1}
+                        {(currentPage - 1) * itemsPerPage + index + 1}
                       </TableCell>
                       <TableCell className="font-bold text-slate-900">
                         {subject.name}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-slate-500 font-semibold uppercase tracking-wider">
-                        {subject.code}
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-slate-200">
@@ -376,6 +386,36 @@ export function SubjectsView() {
               </TableBody>
             </Table>
           </div>
+          {filteredSubjects.length > 0 && (
+            <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50/50">
+              <span className="text-xs text-slate-500 font-medium">
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredSubjects.length)} of {filteredSubjects.length} subjects
+              </span>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-2 text-slate-600"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-xs font-semibold text-slate-600 min-w-[3rem] text-center">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-2 text-slate-600"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
 
@@ -388,21 +428,13 @@ export function SubjectsView() {
           </DialogHeader>
           {editingSubject && (
             <form onSubmit={handleUpdate} className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label>Subject Name</Label>
                   <Input
                     required
                     value={editingSubject.name}
                     onChange={(e) => setEditingSubject({ ...editingSubject, name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Subject Code</Label>
-                  <Input
-                    required
-                    value={editingSubject.code}
-                    onChange={(e) => setEditingSubject({ ...editingSubject, code: e.target.value })}
                   />
                 </div>
               </div>
@@ -506,7 +538,6 @@ export function SubjectsView() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">{viewingSubject.name}</h3>
-                  <p className="text-sm font-mono text-slate-400 font-semibold">{viewingSubject.code}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">

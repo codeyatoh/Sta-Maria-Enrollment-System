@@ -10,13 +10,15 @@ interface SelectContextType {
   open: boolean;
   setOpen: (open: boolean) => void;
   triggerRef: React.MutableRefObject<HTMLButtonElement | null>;
+  contentRef: React.MutableRefObject<HTMLDivElement | null>;
   placeholder?: string;
 }
 
 const SelectContext = React.createContext<SelectContextType>({
   open: false,
   setOpen: () => { /* empty */ },
-  triggerRef: { current: null } as React.MutableRefObject<HTMLButtonElement | null>
+  triggerRef: { current: null } as React.MutableRefObject<HTMLButtonElement | null>,
+  contentRef: { current: null } as React.MutableRefObject<HTMLDivElement | null>
 });
 
 interface SelectProps {
@@ -32,12 +34,16 @@ const Select: React.FC<SelectProps> = ({ children, value, defaultValue, onValueC
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
   const controlledValue = value !== undefined ? value : internalValue;
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Close if click is outside both the container AND the portal dropdown
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const isOutsideContainer = containerRef.current && !containerRef.current.contains(target);
+      const isOutsideContent = contentRef.current && !contentRef.current.contains(target);
+      
+      if (isOutsideContainer && isOutsideContent) {
         setOpen(false);
       }
     };
@@ -56,7 +62,7 @@ const Select: React.FC<SelectProps> = ({ children, value, defaultValue, onValueC
   };
 
   return (
-    <SelectContext.Provider value={{ value: controlledValue, onValueChange: handleChange, open, setOpen, triggerRef }}>
+    <SelectContext.Provider value={{ value: controlledValue, onValueChange: handleChange, open, setOpen, triggerRef, contentRef }}>
       <div ref={containerRef} data-slot="select" className="relative inline-block w-full">
         {children}
       </div>
@@ -121,7 +127,7 @@ type SelectContentProps = React.HTMLAttributes<HTMLDivElement>
 
 const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
   ({ className, children, ...props }, ref) => {
-    const { open, triggerRef } = React.useContext(SelectContext);
+    const { open, triggerRef, contentRef } = React.useContext(SelectContext);
     const [coords, setCoords] = React.useState<{ top: number; left: number; width: number } | null>(null);
 
     React.useLayoutEffect(() => {
@@ -135,11 +141,19 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
       }
     }, [open, triggerRef]);
 
+    const combinedRef = React.useMemo(() => {
+      return (node: HTMLDivElement) => {
+        contentRef.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) ref.current = node;
+      };
+    }, [ref, contentRef]);
+
     if (!open || !coords) return null;
 
     return createPortal(
       <div
-        ref={ref}
+        ref={combinedRef}
         data-slot="select-content"
         style={{
           position: "absolute",

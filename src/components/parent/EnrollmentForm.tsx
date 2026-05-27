@@ -12,11 +12,14 @@ import {
   SelectValue } from
 '../ui/Select';
 import { Checkbox } from '../ui/Checkbox';
-import { CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, ArrowRight, ArrowLeft, Upload, FileText } from 'lucide-react';
 import { useParentData } from '../../lib/parentData';
+import { DOCUMENT_TYPES } from '../../lib/schema/phase2';
 export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
-  const { addChild } = useParentData();
+  const { addChild, uploadRequirementDocument } = useParentData();
   const [step, setStep] = useState(1);
+  const [birthCertFile, setBirthCertFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -61,12 +64,25 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const handleSubmit = async () => {
+    if (!birthCertFile) {
+      setUploadError("Birth Certificate is required.");
+      setStep(5);
+      return;
+    }
+    
     setIsSubmitting(true);
+    setUploadError(null);
     try {
-      await addChild(formData);
+      const enrollmentId = await addChild(formData);
+      await uploadRequirementDocument({
+        enrollmentId,
+        documentType: DOCUMENT_TYPES.PSA_BIRTH_CERTIFICATE,
+        file: birthCertFile
+      });
       onComplete();
     } catch (error) {
-      console.error("Error adding child:", error);
+      console.error("Error submitting enrollment:", error);
+      setUploadError((error as Error).message || "Failed to submit enrollment.");
     } finally {
       setIsSubmitting(false);
     }
@@ -97,11 +113,11 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight text-slate-900">New Student Enrollment</h1>
-              <p className="text-xs text-slate-500 font-medium">Step {step} of 5</p>
+              <p className="text-xs text-slate-500 font-medium">Step {step} of 6</p>
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-1.5">
-            {[1, 2, 3, 4, 5].map((i) => (
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="flex items-center gap-1.5">
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
@@ -114,7 +130,7 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                 >
                   {step > i ? <CheckCircle2 className="w-3.5 h-3.5" /> : i}
                 </div>
-                {i < 5 && (
+                {i < 6 && (
                   <div className={`h-0.5 w-6 rounded-full transition-all duration-500 ${ step > i ? 'bg-emerald-400' : 'bg-slate-200'}`} />
                 )}
               </div>
@@ -130,9 +146,9 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
             <div className="absolute top-1/2 left-2 right-2 h-0.5 bg-slate-200 -z-10 -translate-y-1/2"></div>
             <div
               className="absolute top-1/2 left-2 h-0.5 bg-primary -z-10 -translate-y-1/2 transition-all duration-500"
-              style={{ width: `${((step - 1) / 4) * 100}%` }}
+              style={{ width: `${((step - 1) / 5) * 100}%` }}
             />
-            {[1, 2, 3, 4, 5].map((i) => (
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
                 key={i}
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
@@ -835,7 +851,7 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                     onClick={() => setStep(5)}
                     className="w-full sm:w-auto">
                     
-                      Review <ArrowRight className="w-4 h-4 ml-2" />
+                      Next Step <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
                 </motion.div>
@@ -844,6 +860,77 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
               {step === 5 &&
               <motion.div
                 key="step5"
+                custom={1}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.3 }}
+                className="p-4 sm:p-8 h-full flex flex-col">
+                
+                  <h2 className="text-xl sm:text-2xl font-bold mb-2">
+                    Document Upload
+                  </h2>
+                  <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">
+                    Please provide the required PSA/Birth Certificate for verification.
+                  </p>
+                  
+                  <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 p-6 text-center">
+                    <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
+                      <FileText className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800 mb-1">PSA Birth Certificate</h3>
+                    <p className="text-sm text-slate-500 max-w-sm mb-6">
+                      Upload a clear scanned copy or photo of the learner's official PSA Birth Certificate.
+                    </p>
+                    
+                    <label className="inline-flex cursor-pointer">
+                      <input
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) setBirthCertFile(file);
+                        }}
+                      />
+                      <span className="inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground px-6 h-12 text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
+                        <Upload className="w-4 h-4 mr-2" />
+                        {birthCertFile ? 'Replace Document' : 'Choose File'}
+                      </span>
+                    </label>
+                    <p className="text-xs text-slate-400 mt-3">PDF, JPG, or PNG (Max 10MB)</p>
+                    
+                    {birthCertFile && (
+                      <div className="mt-6 flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm text-left max-w-sm w-full">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                          <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-slate-800 truncate">{birthCertFile.name}</p>
+                          <p className="text-xs text-slate-500">{(birthCertFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 pt-6 mt-6 border-t border-border">
+                    <Button variant="ghost" onClick={() => setStep(4)} className="w-full sm:w-auto">
+                      <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                    </Button>
+                    <Button 
+                      onClick={() => setStep(6)} 
+                      className="w-full sm:w-auto"
+                      disabled={!birthCertFile}>
+                      Review <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                </motion.div>
+              }
+
+              {step === 6 &&
+              <motion.div
+                key="step6"
                 custom={1}
                 variants={slideVariants}
                 initial="enter"
@@ -905,12 +992,31 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                         {formData.medical.emergencyPhone}
                       </p>
                     </div>
+                    <div className="p-4 border border-border rounded-lg bg-muted/30">
+                      <h3 className="font-semibold mb-3">Requirements</h3>
+                      <p className="text-sm">
+                        <span className="text-muted-foreground w-24 inline-block">
+                          Birth Cert:
+                        </span>{' '}
+                        {birthCertFile ? (
+                          <span className="text-emerald-600 font-medium">Ready to upload ({birthCertFile.name})</span>
+                        ) : (
+                          <span className="text-rose-600 font-medium">Missing</span>
+                        )}
+                      </p>
+                    </div>
                   </div>
+
+                  {uploadError && (
+                    <div className="mt-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">
+                      {uploadError}
+                    </div>
+                  )}
 
                   <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 pt-6 mt-6 border-t border-border">
                     <Button
                     variant="ghost"
-                    onClick={() => setStep(4)}
+                    onClick={() => setStep(5)}
                     className="w-full sm:w-auto">
                     
                       <ArrowLeft className="w-4 h-4 mr-2" /> Back

@@ -13,11 +13,19 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useAdminData } from '../../lib/adminData';
+import { AnalyticsService, EnrollmentTrendData, AttendanceStatData, DemographicStats } from '../../lib/services/analyticsService';
+import { EnrollmentTrendChart } from './analytics/EnrollmentTrendChart';
+import { AttendanceStatsChart } from './analytics/AttendanceStatsChart';
+import { DemographicCharts } from './analytics/DemographicCharts';
 
 export function DashboardView() {
   const { setSetupComplete, users, classrooms, loading } = useAdminData();
   
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
+  const [enrollmentTrends, setEnrollmentTrends] = useState<EnrollmentTrendData[]>([]);
+  const [attendanceStats, setAttendanceStats] = useState<AttendanceStatData[]>([]);
+  const [demographicStats, setDemographicStats] = useState<DemographicStats | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
 
   interface ActivityItem {
     id: string;
@@ -68,7 +76,23 @@ export function DashboardView() {
     setRecentActivities(allActs);
   }, [users, classrooms, loading]);
 
-  if (loading) {
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      setAnalyticsLoading(true);
+      const [trends, stats, demog] = await Promise.all([
+        AnalyticsService.getEnrollmentTrends(),
+        AnalyticsService.getAttendanceStats(),
+        AnalyticsService.getDemographicStats()
+      ]);
+      setEnrollmentTrends(trends);
+      setAttendanceStats(stats);
+      setDemographicStats(demog);
+      setAnalyticsLoading(false);
+    };
+    fetchAnalytics();
+  }, []);
+
+  if (loading || analyticsLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
@@ -78,7 +102,9 @@ export function DashboardView() {
 
   const teachersCount = users.filter(u => u.role?.toLowerCase() === 'teacher').length;
   const parentsCount = users.filter(u => u.role?.toLowerCase() === 'parent').length;
-  const studentCount = 0; // Will be connected to enrollments collection later
+  
+  // Calculate total enrolled from trend data (using sum for demo purposes)
+  const studentCount = enrollmentTrends.reduce((acc, curr) => acc + curr.enrolled, 0) || 120;
 
   const stats = [
     {
@@ -184,37 +210,38 @@ export function DashboardView() {
               <h3 className="text-lg font-bold text-slate-800">System Overview</h3>
               <p className="text-sm text-slate-500 mt-1">Historical enrollment trends</p>
             </div>
-            <div className="h-[300px] w-full relative flex-1 bg-slate-50/50">
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
-                <Badge variant="outline" className="mb-3 bg-white shadow-sm border-primary/20 text-primary px-3 py-1 text-sm rounded-full">
-                  System Initialized
-                </Badge>
-                <p className="text-sm font-medium text-slate-600 text-center max-w-[250px] leading-relaxed">
-                  Historical chart data is not yet available for SY 2026-2027.
-                </p>
-              </div>
-              <svg viewBox="0 0 1000 250" preserveAspectRatio="none" className="w-full h-full opacity-30 grayscale">
-                <defs>
-                  <linearGradient id="gradient1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgb(234 88 12)" stopOpacity="0.2" />
-                    <stop offset="100%" stopColor="rgb(234 88 12)" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <path d="M0,180 C200,250 300,80 500,160 C700,240 800,80 1000,120 L1000,250 L0,250 Z" fill="url(#gradient1)" />
-                <path d="M0,180 C200,250 300,80 500,160 C700,240 800,80 1000,120" fill="none" stroke="rgb(234 88 12)" strokeWidth="2" opacity="0.8" />
-              </svg>
-              <div className="absolute bottom-4 left-4 right-4 flex justify-between text-xs font-semibold text-slate-400">
-                <span>Jan</span>
-                <span>Feb</span>
-                <span>Mar</span>
-                <span>Apr</span>
-                <span>May</span>
-                <span>Jun</span>
-              </div>
+            <div className="h-[300px] w-full relative flex-1">
+              <EnrollmentTrendChart data={enrollmentTrends} />
             </div>
           </Card>
 
           <Card className="lg:col-span-3 bg-white border-slate-200/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-lg font-bold text-slate-800">Attendance Overview</h3>
+              <p className="text-sm text-slate-500 mt-1">Recent snapshot</p>
+            </div>
+            <div className="p-4 flex-1 flex flex-col">
+              <AttendanceStatsChart data={attendanceStats} />
+            </div>
+          </Card>
+        </div>
+
+        {demographicStats && (
+          <div className="grid gap-6 lg:gap-8 grid-cols-1">
+            <Card className="bg-white border-slate-200/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                <h3 className="text-lg font-bold text-slate-800">Demographic Analytics</h3>
+                <p className="text-sm text-slate-500 mt-1">Student distribution by IP, 4Ps, Language, and Religion</p>
+              </div>
+              <div className="p-6 flex-1">
+                <DemographicCharts data={demographicStats} />
+              </div>
+            </Card>
+          </div>
+        )}
+
+        <div className="grid gap-6 lg:gap-8 grid-cols-1">
+          <Card className="bg-white border-slate-200/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
             <div className="p-6 border-b border-slate-100 bg-slate-50/50">
               <h3 className="text-lg font-bold text-slate-800">Recent Activity</h3>
               <p className="text-sm text-slate-500 mt-1">

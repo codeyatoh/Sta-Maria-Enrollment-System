@@ -19,6 +19,7 @@ import { ParentDashboardView } from '../../components/parent/ParentDashboardView
 import { MyChildrenView } from '../../components/parent/MyChildrenView';
 import { EnrollmentForm } from '../../components/parent/EnrollmentForm';
 import { ChildDetailView } from '../../components/parent/ChildDetailView';
+import { RequirementsView } from '../../components/parent/RequirementsView';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { useAuth } from '../../lib/AuthContext';
@@ -58,6 +59,7 @@ function ParentPortalContent() {
       case 'dashboard': return <ParentDashboardView onNavigate={handleNavigate} />;
       case 'children': return <MyChildrenView onSelectChild={handleSelectChild} />;
       case 'enrollment': return <EnrollmentForm onComplete={() => handleNavigate('children')} />;
+      case 'requirements': return <RequirementsView />;
       case 'child-detail': return selectedChildId ? <ChildDetailView childId={selectedChildId} onBack={() => handleNavigate('children')} /> : <MyChildrenView onSelectChild={handleSelectChild} />;
       default: return <ParentDashboardView onNavigate={handleNavigate} />;
     }
@@ -108,7 +110,10 @@ function ParentPortalContent() {
         <div>
           <p className="px-3 text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Documents</p>
           <div className="space-y-1">
-            <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-md transition-colors">
+            <button
+              onClick={() => handleNavigate('requirements')}
+              className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${activeView === 'requirements' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}`}
+            >
               <FileText className="w-4 h-4 shrink-0" />
               Requirements
             </button>
@@ -144,7 +149,7 @@ function ParentPortalContent() {
               {uData?.firstName} {uData?.lastName}
             </p>
             <p className="text-[10px] text-muted-foreground truncate font-medium uppercase tracking-wider">
-              {uData?.relationship || 'Parent'} • {uData?.email}
+              {uData?.relationship || 'Parent'} | {uData?.email}
             </p>
           </div>
           {showUserMenu ? (

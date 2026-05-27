@@ -30,7 +30,8 @@ export function GradesView() {
     enrolled.forEach((s) => {
       map[s.id] = {};
       subjects.forEach((sub) => {
-        map[s.id][sub.code] = s.grades?.[sub.code]?.toString() || '';
+        const code = sub.code ?? sub.name;
+        map[s.id][code] = (s.grades as Record<string, unknown>)?.[code]?.toString() || '';
       });
     });
     setLocalGrades(map);
@@ -137,7 +138,7 @@ export function GradesView() {
                   <TableHead className="font-bold text-slate-700 w-64">Learner Name</TableHead>
                   {subjects.map((sub) => (
                     <TableHead
-                      key={sub.code}
+                      key={sub.code ?? sub.name}
                       className="font-bold text-slate-700 text-center whitespace-nowrap px-4"
                     >
                       {sub.name}
@@ -177,31 +178,34 @@ export function GradesView() {
                           </div>
                         </div>
                       </TableCell>
-                        {subjects.map((sub) => (
-                        <TableCell key={sub.code} className="text-center px-2">
-                          <Input
-                            type="text"
-                            inputMode="decimal"
-                            className="w-16 h-9 font-mono text-center mx-auto text-sm border-slate-200 hover:border-primary focus:ring-primary/20 transition-all rounded-lg shadow-sm"
-                            value={localGrades[s.id]?.[sub.code] || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              // Allow only numbers and one decimal point
-                              if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                if (parseFloat(val) > 100) return; // Cap at 100
-                                setLocalGrades({
-                                  ...localGrades,
-                                  [s.id]: {
-                                    ...localGrades[s.id],
-                                    [sub.code]: val
-                                  }
-                                });
-                                setSaved(false);
-                              }
-                            }}
-                          />
-                        </TableCell>
-                      ))}
+                        {subjects.map((sub) => {
+                          const code = sub.code ?? sub.name;
+                          return (
+                          <TableCell key={code} className="text-center px-2">
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              className="w-16 h-9 font-mono text-center mx-auto text-sm border-slate-200 hover:border-primary focus:ring-primary/20 transition-all rounded-lg shadow-sm"
+                              value={localGrades[s.id]?.[code] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                // Allow only numbers and one decimal point
+                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                  if (parseFloat(val) > 100) return; // Cap at 100
+                                  setLocalGrades({
+                                    ...localGrades,
+                                    [s.id]: {
+                                      ...localGrades[s.id],
+                                      [code]: val
+                                    }
+                                  });
+                                  setSaved(false);
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          );
+                        })}
                       <TableCell className="text-center pr-6">
                         <Badge
                           variant="secondary"

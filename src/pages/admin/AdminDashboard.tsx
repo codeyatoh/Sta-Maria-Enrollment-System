@@ -8,6 +8,7 @@ import {
   FileText,
   Settings,
   Home,
+  Heart,
   ChevronDown,
   ChevronRight,
   Menu,
@@ -20,7 +21,9 @@ import { UsersView } from '../../components/admin/UsersView';
 import { ClassroomsView } from '../../components/admin/ClassroomsView';
 import { SubjectsView } from '../../components/admin/SubjectsView';
 import { ReportsView } from '../../components/admin/ReportsView';
+import { DocumentVerificationView } from '../../components/admin/DocumentVerificationView';
 import { SetupWizard } from '../../components/admin/SetupWizard';
+import { HealthDashboardView } from '../../components/admin/HealthDashboardView';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 
@@ -49,7 +52,9 @@ function AdminDashboardContent() {
     { id: 'users', label: 'Users', icon: Users, category: 'Management' },
     { id: 'classrooms', label: 'Classrooms', icon: Home, category: 'Management' },
     { id: 'subjects', label: 'Subjects', icon: BookOpen, category: 'Management' },
-    { id: 'reports', label: 'Reports (SF1, SF4)', icon: FileText, category: 'Documents' }
+    { id: 'health', label: 'Health & Nutrition', icon: Heart, category: 'Management' },
+    { id: 'reports', label: 'Reports (SF1, SF4, SF8)', icon: FileText, category: 'Documents' },
+    { id: 'document-verification', label: 'Document Verification', icon: FileText, category: 'Documents' }
   ];
 
   const renderActiveView = () => {
@@ -58,7 +63,9 @@ function AdminDashboardContent() {
       case 'users': return <UsersView />;
       case 'classrooms': return <ClassroomsView />;
       case 'subjects': return <SubjectsView />;
+      case 'health': return <HealthDashboardView />;
       case 'reports': return <ReportsView />;
+      case 'document-verification': return <DocumentVerificationView />;
       default: return <DashboardView />;
     }
   };

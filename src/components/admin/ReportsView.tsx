@@ -8,28 +8,67 @@ import {
   SelectTrigger,
   SelectValue
 } from '../ui/Select';
-import { FileText, Download, CheckCircle2 } from 'lucide-react';
+import { FileText, Download, CheckCircle2, AlertCircle, IdCard } from 'lucide-react';
 import { useAdminData } from '../../lib/adminData';
 import { SF4ReportDocument } from './SF4ReportDocument';
 import { SF1ReportDocument } from './SF1ReportDocument';
+import { SF8ReportDocument } from './SF8ReportDocument';
+import { StudentIdCardDocument } from './StudentIdCardDocument';
+import { ReportDataService } from '../../lib/services/reportDataService';
+import { HealthAnalyticsService, HealthData } from '../../lib/services/healthAnalyticsService';
+import type { SF1Data, SF4Data } from '../../lib/services/reportDataService';
 
 export function ReportsView() {
   const { schoolYear, classrooms, sections } = useAdminData();
   const [generating, setGenerating] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [showSF4, setShowSF4] = useState(false);
-  const [showSF1, setShowSF1] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [reportMonth, setReportMonth] = useState('JANUARY');
+  const [selectedSectionId, setSelectedSectionId] = useState('all');
 
-  const handleGenerate = (reportId: string) => {
+  const [sf1Data, setSf1Data] = useState<SF1Data | null>(null);
+  const [sf4Data, setSf4Data] = useState<SF4Data | null>(null);
+  const [sf8Data, setSf8Data] = useState<{schoolYear: string, gradeLevel: string, section: string, learners: HealthData[]} | null>(null);
+  const [idCardData, setIdCardData] = useState<Awaited<ReturnType<typeof ReportDataService.getStudentIdCardData>> | null>(null);
+  const [generatingIdCard, setGeneratingIdCard] = useState(false);
+
+  const syName = schoolYear?.name ?? '2024-2025';
+
+  const handleGenerate = async (reportId: string) => {
     setGenerating(reportId);
-    setTimeout(() => {
+    setError(null);
+    try {
+      if (reportId === 'sf1') {
+        const selectedSection = sections.find(s => s.id === selectedSectionId);
+        const data = await ReportDataService.getSF1Data(
+          syName,
+          selectedSection?.gradeLevel,
+          selectedSectionId === 'all' ? undefined : selectedSectionId
+        );
+        setSf1Data(data);
+      } else if (reportId === 'sf4') {
+        const data = await ReportDataService.getSF4Data(syName, reportMonth);
+        setSf4Data(data);
+      } else if (reportId === 'sf8') {
+        const selectedSection = sections.find(s => s.id === selectedSectionId);
+        const learners = await HealthAnalyticsService.getHealthData();
+        // Filter learners by section if a specific section is selected
+        const filteredLearners = selectedSectionId === 'all' 
+          ? learners 
+          : learners.filter(l => l.sectionId === selectedSectionId);
+          
+        setSf8Data({
+          schoolYear: syName,
+          gradeLevel: selectedSection?.gradeLevel || 'All',
+          section: selectedSection?.name || 'All Sections',
+          learners: filteredLearners
+        });
+      }
+    } catch (err) {
+      console.error('Report generation error:', err);
+      setError('Failed to generate report. Please try again.');
+    } finally {
       setGenerating(null);
-      setSuccess(reportId);
-      setTimeout(() => setSuccess(null), 3000);
-      if (reportId === 'sf4') setShowSF4(true);
-      else if (reportId === 'sf1') setShowSF1(true);
-    }, 1000);
+    }
   };
 
   const reports = [
@@ -44,6 +83,12 @@ export function ReportsView() {
       title: 'School Form 4 (SF4)',
       desc: 'Monthly Learner Movement and Attendance summary for the entire school.',
       iconClass: 'bg-indigo-100 text-indigo-600'
+    },
+    {
+      id: 'sf8',
+      title: 'School Form 8 (SF8)',
+      desc: "Learner's Basic Health and Nutrition Report containing BMI and nutritional status.",
+      iconClass: 'bg-emerald-100 text-emerald-600'
     }
   ];
 
@@ -63,11 +108,23 @@ export function ReportsView() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-10">
+        {error && (
+          <div className="mb-6 flex items-center gap-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-4 py-3">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error}
+          </div>
+        )}
+
+        {/* ── Official DepEd Forms ─────────────────────────── */}
+        <section>
+          <div className="mb-5">
+            <h2 className="text-lg font-bold text-slate-800">Official DepEd Forms</h2>
+            <p className="text-sm text-slate-500 mt-0.5">Generate and print DepEd-standard school forms from live data.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl">
           {reports.map((report) => {
             const isGenerating = generating === report.id;
-            const isSuccess = success === report.id;
 
             return (
               <Card
@@ -114,7 +171,7 @@ export function ReportsView() {
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Section</label>
-                      <Select>
+                      <Select value={selectedSectionId} onValueChange={setSelectedSectionId}>
                         <SelectTrigger className="bg-slate-50 border-slate-200 rounded-xl">
                           <SelectValue placeholder="All Sections" />
                         </SelectTrigger>
@@ -146,39 +203,149 @@ export function ReportsView() {
                 </div>
 
                 <Button
-                  className={`w-full rounded-xl h-11 font-semibold transition-all ${
-                    isSuccess
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                      : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
-                  }`}
+                  className="w-full rounded-xl h-11 font-semibold transition-all bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
                   onClick={() => handleGenerate(report.id)}
-                  disabled={isGenerating || isSuccess}
+                  disabled={isGenerating}
                 >
                   {isGenerating ? (
                     <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />Generating...</>
-                  ) : isSuccess ? (
-                    <><CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />Ready to Download</>
                   ) : (
                     <><Download className="w-4 h-4 mr-2" />Generate Report</>
                   )}
                 </Button>
+
+                {/* Quick success indicator after data loaded */}
+                {report.id === 'sf1' && sf1Data && !isGenerating && (
+                  <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {sf1Data.learners.length} learner(s) ready to print
+                  </p>
+                )}
+                {report.id === 'sf4' && sf4Data && !isGenerating && (
+                  <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {sf4Data.sections.length} section(s) ready to print
+                  </p>
+                )}
+                {report.id === 'sf8' && sf8Data && !isGenerating && (
+                  <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {sf8Data.learners.length} learner(s) ready to print
+                  </p>
+                )}
               </Card>
             );
           })}
-        </div>
+          </div>
+        </section>
+
+        {/* ── Print Templates ──────────────────────────────── */}
+        <section>
+          <div className="mb-5">
+            <h2 className="text-lg font-bold text-slate-800">Print Templates</h2>
+            <p className="text-sm text-slate-500 mt-0.5">Generate custom printable documents like student ID cards.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl">
+            <Card className="bg-white border-slate-200/60 p-6 sm:p-8 shadow-sm rounded-3xl flex flex-col hover:shadow-md transition-all duration-300">
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-14 h-14 rounded-2xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0 shadow-inner">
+                  <IdCard className="w-7 h-7" />
+                </div>
+                <div className="flex-1 min-w-0 pt-1">
+                  <h3 className="font-bold text-xl text-slate-900">Student ID Cards</h3>
+                  <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+                    Print standard school ID cards for all enrolled learners with LRN and guardian info.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4 mb-8 flex-1">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">School Year</label>
+                  <Select defaultValue={schoolYear?.id}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {schoolYear && <SelectItem value={schoolYear.id}>{schoolYear.name}</SelectItem>}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Section (optional)</label>
+                  <Select value={selectedSectionId} onValueChange={setSelectedSectionId}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 rounded-xl">
+                      <SelectValue placeholder="All Sections" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sections</SelectItem>
+                      {sections.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button
+                className="w-full rounded-xl h-11 font-semibold transition-all bg-violet-600 text-white hover:bg-violet-700 shadow-sm"
+                onClick={async () => {
+                  setGeneratingIdCard(true);
+                  try {
+                    const cards = await ReportDataService.getStudentIdCardData(
+                      syName,
+                      selectedSectionId === 'all' ? undefined : selectedSectionId
+                    );
+                    setIdCardData(cards);
+                  } catch (err) {
+                    console.error('ID card generation error:', err);
+                  } finally {
+                    setGeneratingIdCard(false);
+                  }
+                }}
+                disabled={generatingIdCard}
+              >
+                {generatingIdCard ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />Generating...</>
+                ) : (
+                  <><Download className="w-4 h-4 mr-2" />Generate ID Cards</>
+                )}
+              </Button>
+              {idCardData && !generatingIdCard && (
+                <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  {idCardData.length} card(s) ready to print
+                </p>
+              )}
+            </Card>
+          </div>
+        </section>
+
       </div>
 
-      {showSF4 && (
+      {sf4Data && (
         <SF4ReportDocument
-          onClose={() => setShowSF4(false)}
-          reportMonth={reportMonth}
-          schoolYear={schoolYear?.name || '2024-2025'}
+          onClose={() => setSf4Data(null)}
+          data={sf4Data}
         />
       )}
-      {showSF1 && (
+      {sf1Data && (
         <SF1ReportDocument
-          onClose={() => setShowSF1(false)}
-          schoolYear={schoolYear?.name || '2024-2025'}
+          onClose={() => setSf1Data(null)}
+          data={sf1Data}
+        />
+      )}
+      {sf8Data && (
+        <SF8ReportDocument
+          onClose={() => setSf8Data(null)}
+          data={sf8Data}
+        />
+      )}
+      {idCardData && (
+        <StudentIdCardDocument
+          data={idCardData}
+          schoolName="Sta. Maria Elementary School"
+          onClose={() => setIdCardData(null)}
         />
       )}
     </div>

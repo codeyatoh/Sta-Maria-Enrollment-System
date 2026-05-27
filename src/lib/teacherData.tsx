@@ -27,7 +27,7 @@ export type Student = {
   medical?: {
     height: string;
     weight: string;
-    [key: string]: any;
+    [key: string]: string | boolean | string[] | undefined;
   };
 };
 
@@ -39,9 +39,19 @@ export type AttendanceEntry = {
   sectionId: string;
 };
 
+export type TeacherSubject = {
+  id: string;
+  name: string;
+  code?: string;
+  gradeLevel?: string;
+  units?: number;
+  status?: string;
+  academicYear?: string;
+};
+
 type TeacherContextType = {
   students: Student[];
-  subjects: any[];
+  subjects: TeacherSubject[];
   attendance: AttendanceEntry[];
   currentSection: string;
   updateAttendance: (studentId: string, date: string, status: 'Present' | 'Absent' | 'Late') => Promise<void>;
@@ -56,7 +66,7 @@ const TeacherContext = createContext<TeacherContextType | undefined>(undefined);
 export function TeacherDataProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<TeacherSubject[]>([]);
   const [attendance, setAttendance] = useState<AttendanceEntry[]>([]);
   const [currentSection, setCurrentSection] = useState('');
   const [loading, setLoading] = useState(true);
@@ -79,8 +89,8 @@ export function TeacherDataProvider({ children }: { children: ReactNode }) {
         setCurrentSection(sectionId);
 
         let isCleanedUp = false;
-        let unsubPending = () => {};
-        let unsubEnrolled = () => {};
+        let unsubPending = () => { /* intentional no-op */ };
+        let unsubEnrolled = () => { /* intentional no-op */ };
 
         getDoc(doc(db, 'sections', sectionId)).then((secSnap) => {
           if (isCleanedUp || !secSnap.exists()) return;
@@ -120,7 +130,7 @@ export function TeacherDataProvider({ children }: { children: ReactNode }) {
 
         // 4. Get Subjects
         const unsubSubjects = onSnapshot(query(collection(db, 'subjects')), (sSnap) => {
-          setSubjects(sSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+          setSubjects(sSnap.docs.map(d => ({ id: d.id, ...d.data() } as TeacherSubject)));
         });
 
         setLoading(false);
