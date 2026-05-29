@@ -10,11 +10,14 @@ import {
   TableHeader,
   TableRow
 } from '../ui/Table';
-import { CheckCircle2, XCircle, CircleDashed, ClipboardCheck, Clock, Check, X, Eye } from 'lucide-react';
+import { CheckCircle2, XCircle, CircleDashed, ClipboardCheck, Clock, Check, X, Eye, User } from 'lucide-react';
 import { useTeacherData } from '../../lib/teacherData';
+import { FullStudentProfileModal } from './FullStudentProfileModal';
+import { useState } from 'react';
 
 export function EnrollmentsView() {
   const { students, updateStudentStatus, loading } = useTeacherData();
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -95,6 +98,16 @@ export function EnrollmentsView() {
                     <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 w-fit shrink-0">
                       <CircleDashed className="w-3 h-3 mr-1.5 animate-spin-slow" /> Pending
                     </Badge>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-xl bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 transition-colors"
+                      onClick={() => setSelectedStudentId(student.id)}
+                    >
+                      <User className="w-4 h-4 mr-2" /> View Full Profile
+                    </Button>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 mb-6">
@@ -200,6 +213,13 @@ export function EnrollmentsView() {
           </div>
         )}
       </div>
+
+      <FullStudentProfileModal
+        student={students.find(s => s.id === selectedStudentId) || null}
+        isOpen={!!selectedStudentId}
+        onClose={() => setSelectedStudentId(null)}
+        allowEditHealth={false}
+      />
     </div>
   );
 }

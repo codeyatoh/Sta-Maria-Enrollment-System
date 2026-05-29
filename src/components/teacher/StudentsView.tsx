@@ -12,13 +12,7 @@ import {
   TableHeader,
   TableRow
 } from '../ui/Table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter
-} from '../ui/Dialog';
+import { FullStudentProfileModal } from './FullStudentProfileModal';
 import { Eye, Users, Activity, Scale, Ruler } from 'lucide-react';
 import { useTeacherData } from '../../lib/teacherData';
 
@@ -49,11 +43,8 @@ export function StudentsView() {
     }
   };
 
-  const handleSaveBmi = () => {
-    if (selectedStudent) {
-      updateStudentBmi(selectedStudent, editBmi.height, editBmi.weight);
-      setSelectedStudent(null);
-    }
+  const handleSaveBmi = (id: string, height: string, weight: string) => {
+    updateStudentBmi(id, height, weight);
   };
 
   const calcBmi = (h?: string, w?: string) => {
@@ -166,93 +157,13 @@ export function StudentsView() {
         </Card>
       </div>
 
-      <Dialog open={!!selectedStudent} onOpenChange={() => setSelectedStudent(null)}>
-        <DialogContent className="sm:max-w-md w-[95vw] max-h-[90vh] overflow-y-auto rounded-2xl p-0 overflow-hidden border-0 shadow-2xl">
-          <div className="bg-gradient-to-r from-primary/10 to-transparent p-6 pb-4 border-b border-border/50">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold flex items-center gap-3 text-slate-800">
-                <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm border border-primary/30">
-                  {student?.firstName?.charAt(0) || ''}{student?.lastName?.charAt(0) || ''}
-                </div>
-                {student?.firstName} {student?.lastName}
-              </DialogTitle>
-            </DialogHeader>
-          </div>
-          
-          {student && (
-            <div className="p-6 space-y-8">
-              <div className="grid grid-cols-2 gap-y-6 gap-x-4">
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">LRN</p>
-                  <p className="font-mono font-bold text-slate-800">{student.lrn}</p>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">Gender</p>
-                  <p className="font-medium text-slate-800">{student.gender}</p>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">Birth Date</p>
-                  <p className="font-medium text-slate-800">{student.birthDate}</p>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">Grade Level</p>
-                  <p className="font-medium text-slate-800">Grade {student.gradeLevel}</p>
-                </div>
-              </div>
-
-              <div className="border-t border-slate-100 pt-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Activity className="w-5 h-5 text-primary" />
-                  <h4 className="font-bold text-slate-800 text-lg">Update Health Data</h4>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-slate-600 font-semibold">
-                      <Ruler className="w-4 h-4" /> Height (cm)
-                    </Label>
-                    <Input
-                      type="number"
-                      value={editBmi.height}
-                      onChange={(e) => setEditBmi({ ...editBmi, height: e.target.value })}
-                      className="rounded-xl border-slate-200 focus:ring-primary/20"
-                      placeholder="e.g. 150"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-slate-600 font-semibold">
-                      <Scale className="w-4 h-4" /> Weight (kg)
-                    </Label>
-                    <Input
-                      type="number"
-                      value={editBmi.weight}
-                      onChange={(e) => setEditBmi({ ...editBmi, weight: e.target.value })}
-                      className="rounded-xl border-slate-200 focus:ring-primary/20"
-                      placeholder="e.g. 45"
-                    />
-                  </div>
-                </div>
-                
-                <div className="mt-4 p-4 bg-primary/5 rounded-xl border border-primary/10 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-slate-700">Calculated BMI</span>
-                  <Badge variant="secondary" className="bg-white border border-slate-200 text-lg px-3 py-1 shadow-sm font-mono text-primary">
-                    {calcBmi(editBmi.height, editBmi.weight)}
-                  </Badge>
-                </div>
-              </div>
-              
-              <DialogFooter className="flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100">
-                <Button variant="outline" onClick={() => setSelectedStudent(null)} className="w-full sm:w-auto rounded-xl">
-                  Cancel
-                </Button>
-                <Button className="w-full sm:w-auto rounded-xl shadow-md" onClick={handleSaveBmi}>
-                  Save Health Data
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <FullStudentProfileModal
+        student={student || null}
+        isOpen={!!selectedStudent}
+        onClose={() => setSelectedStudent(null)}
+        onSaveBmi={handleSaveBmi}
+        allowEditHealth={true}
+      />
     </div>
   );
 }
