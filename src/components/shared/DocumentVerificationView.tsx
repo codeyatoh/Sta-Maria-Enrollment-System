@@ -51,7 +51,7 @@ export function DocumentVerificationView({ role = 'admin', gradeLevelFilter }: {
 
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => {
-      const matchesFilter = filter === 'ALL' || doc.status === filter;
+      const matchesFilter = filter === 'ALL' || doc.status?.toUpperCase() === filter;
       const text = `${doc.studentName} ${doc.fileName} ${doc.gradeLevel}`.toLowerCase();
       const matchesSearch = text.includes(search.toLowerCase());
       return matchesFilter && matchesSearch;
