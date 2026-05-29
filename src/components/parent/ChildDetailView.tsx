@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
+import { Input } from '../ui/Input';
+import { Label } from '../ui/Label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/Select';
 import {
   Table,
   TableBody,
@@ -19,7 +23,8 @@ import {
   AlertCircle,
   User,
   HeartPulse,
-  CalendarCheck
+  CalendarCheck,
+  Edit
 } from 'lucide-react';
 import { useParentData } from '../../lib/parentData';
 
@@ -27,10 +32,36 @@ export function ChildDetailView({
   childId,
   onBack
 }: {childId: string;onBack: () => void;}) {
-  const { children } = useParentData();
+  const { children, updateChild } = useParentData();
   const child = children.find((c) => c.id === childId);
   
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editData, setEditData] = useState<any>(null);
+
   if (!child) return null;
+
+  const handleOpenEdit = () => {
+    // Make a deep copy to edit independently
+    setEditData(JSON.parse(JSON.stringify(child)));
+    setIsEditOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editData) return;
+    setIsSaving(true);
+    try {
+      // Remove fields that shouldn't be updated here if any
+      const { id, parentId, submittedAt, attendance, status, requirements, requirementUploads, schemaVersion, ...updates } = editData;
+      await updateChild(child.id, updates);
+      setIsEditOpen(false);
+    } catch (error) {
+      console.error("Failed to update child:", error);
+      alert("Failed to update child details. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -104,6 +135,15 @@ export function ChildDetailView({
           <Badge variant="outline" className="border-slate-300 text-slate-600 bg-white/60 font-semibold px-3 py-1 rounded-full shadow-sm">
             Grade {child.gradeLevel}
           </Badge>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="ml-auto rounded-xl border-primary/20 text-primary hover:bg-primary/5"
+            onClick={handleOpenEdit}
+          >
+            <Edit className="w-4 h-4 mr-2" />
+            Edit Info
+          </Button>
         </div>
       </header>
 
@@ -362,6 +402,130 @@ export function ChildDetailView({
           </Tabs>
         </div>
       </div>
+
+      {/* Edit Child Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={(open) => !open && setIsEditOpen(false)}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Child Information</DialogTitle>
+          </DialogHeader>
+          
+          {editData && (
+            <div className="space-y-8 pt-4">
+              {/* Basic Info */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Basic Information</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>First Name</Label>
+                    <Input value={editData.firstName} onChange={e => setEditData({...editData, firstName: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Last Name</Label>
+                    <Input value={editData.lastName} onChange={e => setEditData({...editData, lastName: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Middle Name</Label>
+                    <Input value={editData.middleName} onChange={e => setEditData({...editData, middleName: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Birth Date</Label>
+                    <Input type="date" value={editData.birthDate} onChange={e => setEditData({...editData, birthDate: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Gender</Label>
+                    <Select value={editData.gender} onValueChange={v => setEditData({...editData, gender: v})}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>LRN</Label>
+                    <Input value={editData.lrn} onChange={e => setEditData({...editData, lrn: e.target.value})} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Address</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2 space-y-2">
+                    <Label>Street</Label>
+                    <Input value={editData.address.street} onChange={e => setEditData({...editData, address: {...editData.address, street: e.target.value}})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Barangay</Label>
+                    <Input value={editData.address.barangay} onChange={e => setEditData({...editData, address: {...editData.address, barangay: e.target.value}})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>City/Municipality</Label>
+                    <Input value={editData.address.city} onChange={e => setEditData({...editData, address: {...editData.address, city: e.target.value}})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Province</Label>
+                    <Input value={editData.address.province} onChange={e => setEditData({...editData, address: {...editData.address, province: e.target.value}})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Zip Code</Label>
+                    <Input value={editData.address.zipCode} onChange={e => setEditData({...editData, address: {...editData.address, zipCode: e.target.value}})} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Medical */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Medical Information</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Height (cm)</Label>
+                    <Input value={editData.medical.height} onChange={e => setEditData({...editData, medical: {...editData.medical, height: e.target.value}})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Weight (kg)</Label>
+                    <Input value={editData.medical.weight} onChange={e => setEditData({...editData, medical: {...editData.medical, weight: e.target.value}})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Blood Type</Label>
+                    <Select value={editData.medical.bloodType} onValueChange={v => setEditData({...editData, medical: {...editData.medical, bloodType: v}})}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A+">A+</SelectItem><SelectItem value="A-">A-</SelectItem>
+                        <SelectItem value="B+">B+</SelectItem><SelectItem value="B-">B-</SelectItem>
+                        <SelectItem value="AB+">AB+</SelectItem><SelectItem value="AB-">AB-</SelectItem>
+                        <SelectItem value="O+">O+</SelectItem><SelectItem value="O-">O-</SelectItem>
+                        <SelectItem value="Unknown">Unknown</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Allergies</Label>
+                    <Input value={editData.medical.allergies} onChange={e => setEditData({...editData, medical: {...editData.medical, allergies: e.target.value}})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Emergency Contact</Label>
+                    <Input value={editData.medical.emergencyContact} onChange={e => setEditData({...editData, medical: {...editData.medical, emergencyContact: e.target.value}})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Emergency Phone</Label>
+                    <Input value={editData.medical.emergencyPhone} onChange={e => setEditData({...editData, medical: {...editData.medical, emergencyPhone: e.target.value}})} />
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="pt-6 border-t">
+                <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+                <Button onClick={handleSaveEdit} disabled={isSaving}>
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
