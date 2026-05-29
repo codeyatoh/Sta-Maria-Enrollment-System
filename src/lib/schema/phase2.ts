@@ -18,6 +18,7 @@ export type RequirementUploadMeta = {
   documentId: string;
   documentType: DocumentType;
   fileName: string;
+  fileUrl?: string;
   status: DocumentStatus;
   uploadedAt: unknown;
 };

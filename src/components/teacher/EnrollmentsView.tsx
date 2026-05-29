@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow
 } from '../ui/Table';
-import { CheckCircle2, XCircle, CircleDashed, ClipboardCheck, Clock, Check, X } from 'lucide-react';
+import { CheckCircle2, XCircle, CircleDashed, ClipboardCheck, Clock, Check, X, Eye } from 'lucide-react';
 import { useTeacherData } from '../../lib/teacherData';
 
 export function EnrollmentsView() {
@@ -107,6 +107,18 @@ export function EnrollmentsView() {
                       <p className="font-bold text-slate-700">{student.medical?.weight || 'N/A'} kg</p>
                     </div>
                   </div>
+
+                  {student.requirementUploads?.psaBirthCertificate?.fileUrl && (
+                    <div className="mb-6">
+                      <Button
+                        variant="outline"
+                        className="w-full rounded-xl bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors"
+                        onClick={() => window.open(student.requirementUploads!.psaBirthCertificate!.fileUrl, '_blank')}
+                      >
+                        <Eye className="w-4 h-4 mr-2" /> View PSA Birth Certificate
+                      </Button>
+                    </div>
+                  )}
 
                   <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-slate-100">
                     <Button

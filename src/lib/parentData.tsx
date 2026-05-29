@@ -269,6 +269,7 @@ export function ParentDataProvider({ children: reactChildren }: {children: React
           documentId,
           documentType: documentParams.documentType,
           fileName: documentParams.file.name,
+          fileUrl,
           status: DOCUMENT_STATUS.PENDING,
           uploadedAt: serverTimestamp()
         }

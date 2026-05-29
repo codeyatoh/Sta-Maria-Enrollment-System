@@ -23,14 +23,13 @@ import { StudentsView } from '../../components/teacher/StudentsView';
 import { AttendanceView } from '../../components/teacher/AttendanceView';
 import { GradesView } from '../../components/teacher/GradesView';
 import { TeacherReportsView } from '../../components/teacher/TeacherReportsView';
-import { DocumentVerificationView } from '../../components/shared/DocumentVerificationView';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { useAuth } from '../../lib/AuthContext';
 
 function TeacherDashboardContent() {
   const navigate = useNavigate();
-  const { students, currentGradeLevel } = useTeacherData();
+  const { students } = useTeacherData();
   const { userData } = useAuth();
   const [activeView, setActiveView] = useState('dashboard');
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -57,7 +56,6 @@ function TeacherDashboardContent() {
     { id: 'students', label: 'Students', icon: Users, category: 'Classroom' },
     { id: 'attendance', label: 'Attendance', icon: Calendar, category: 'Classroom' },
     { id: 'grades', label: 'Grades', icon: ClipboardList, category: 'Classroom' },
-    { id: 'verification', label: 'Document Verification', icon: FileText, category: 'Documents' },
     { id: 'reports', label: 'Reports (SF5, SF8, SF9)', icon: FileText, category: 'Documents' }
   ];
 
@@ -68,7 +66,6 @@ function TeacherDashboardContent() {
       case 'students': return <StudentsView />;
       case 'attendance': return <AttendanceView />;
       case 'grades': return <GradesView />;
-      case 'verification': return <DocumentVerificationView role="teacher" gradeLevelFilter={currentGradeLevel} />;
       case 'reports': return <TeacherReportsView />;
       default: return <TeacherDashboardView />;
     }
