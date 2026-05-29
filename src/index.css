@@ -136,8 +136,8 @@
 }
 
 /* Auto-capitalize text inputs for neatness in forms */
-input[type="text"],
-textarea {
+.uppercase-inputs input[type="text"],
+.uppercase-inputs textarea {
   text-transform: uppercase;
 }
 

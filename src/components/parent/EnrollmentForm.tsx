@@ -123,7 +123,7 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
     })
   };
   return (
-    <div className="flex flex-col h-full bg-slate-50/50">
+    <div className="flex flex-col h-full bg-slate-50/50 uppercase-inputs">
       <header className="px-6 py-5 border-b border-border bg-gradient-to-r from-primary/5 via-primary/10 to-transparent shrink-0">
         <div className="max-w-3xl mx-auto w-full flex items-center justify-between">
           <div className="flex items-center gap-3">
