@@ -64,19 +64,40 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const handleSubmit = async () => {
-    if (!birthCertFile) {
-      setUploadError("Birth Certificate is required.");
-      setStep(5);
-      return;
-    }
-    
     setIsSubmitting(true);
     setUploadError(null);
     try {
-      await submitFullEnrollment(formData, {
+      const toUpper = (str: string | undefined | null) => str ? str.toUpperCase() : '';
+      
+      const upperCaseFormData = {
+        ...formData,
+        firstName: toUpper(formData.firstName),
+        lastName: toUpper(formData.lastName),
+        middleName: toUpper(formData.middleName),
+        address: {
+          ...formData.address,
+          street: toUpper(formData.address.street),
+          barangay: toUpper(formData.address.barangay),
+          city: toUpper(formData.address.city),
+          province: toUpper(formData.address.province)
+        },
+        medical: {
+          ...formData.medical,
+          allergies: toUpper(formData.medical.allergies),
+          emergencyContact: toUpper(formData.medical.emergencyContact),
+          pwdId: toUpper(formData.medical.pwdId)
+        },
+        additional: {
+          ...formData.additional,
+          motherTongue: toUpper(formData.additional.motherTongue),
+          indigenousGroup: toUpper(formData.additional.indigenousGroup)
+        }
+      };
+
+      await submitFullEnrollment(upperCaseFormData, birthCertFile ? {
         documentType: DOCUMENT_TYPES.PSA_BIRTH_CERTIFICATE,
         file: birthCertFile
-      });
+      } : undefined);
       onComplete();
     } catch (error) {
       console.error("Error submitting enrollment:", error);
@@ -869,12 +890,10 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                 transition={{ duration: 0.3 }}
                 className="p-4 sm:p-8 h-full flex flex-col">
                 
-                  <h2 className="text-xl sm:text-2xl font-bold mb-2">
-                    Document Upload
-                  </h2>
-                  <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">
-                    Please provide the required PSA/Birth Certificate for verification.
-                  </p>
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-bold text-slate-800">Document Upload</h2>
+                    <p className="text-slate-500 mt-1">Please provide the PSA/Birth Certificate for verification. (Optional - you can submit later)</p>
+                  </div>
                   
                   <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 p-6 text-center">
                     <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mb-4">

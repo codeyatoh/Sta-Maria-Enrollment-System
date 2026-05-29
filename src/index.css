@@ -135,3 +135,10 @@
   }
 }
 
+/* Auto-capitalize text inputs for neatness in forms */
+input[type="text"],
+textarea {
+  text-transform: uppercase;
+}
+
+

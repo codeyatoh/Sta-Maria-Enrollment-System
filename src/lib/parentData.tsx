@@ -227,44 +227,50 @@ export function ParentDataProvider({ children: reactChildren }: {children: React
 
   const submitFullEnrollment = async (
     childData: Omit<Child, 'id' | 'status' | 'requirements' | 'submittedAt' | 'attendance' | 'parentId'>,
-    documentParams: {
+    documentParams?: {
       documentType: DocumentType;
       file: File;
     }
   ): Promise<string> => {
     if (!user) throw new Error('Not authenticated');
 
-    const validationError = validateRequirementUpload(documentParams.file);
-    if (validationError) throw new Error(validationError);
+    let fileUrl = '';
+    let documentId = '';
+    let requirementKey = '';
 
-    // 1. Upload to Cloudinary FIRST
-    const fileUrl = await uploadToCloudinary(documentParams.file);
-
-    // 2. Generate ID for the enrollment
     const enrollmentId = generateEnrollmentId();
     const studentName = `${childData.firstName} ${childData.lastName}`;
-    const requirementKey = documentTypeToRequirementKey(documentParams.documentType);
 
-    // 3. Add the Document Record to Firestore
-    const documentId = await addEnrollmentDocumentRecord({
-      enrollmentId,
-      parentId: user.uid,
-      studentName,
-      gradeLevel: childData.gradeLevel,
-      documentType: documentParams.documentType,
-      fileName: documentParams.file.name,
-      fileUrl,
-      mimeType: documentParams.file.type,
-      sizeBytes: documentParams.file.size
-    });
+    if (documentParams) {
+      const validationError = validateRequirementUpload(documentParams.file);
+      if (validationError) throw new Error(validationError);
 
-    // 4. Save the full Child record with the proper nested requirementUploads object
+      // 1. Upload to Cloudinary FIRST
+      fileUrl = await uploadToCloudinary(documentParams.file);
+
+      // 2. Add the Document Record to Firestore
+      documentId = await addEnrollmentDocumentRecord({
+        enrollmentId,
+        parentId: user.uid,
+        studentName,
+        gradeLevel: childData.gradeLevel,
+        documentType: documentParams.documentType,
+        fileName: documentParams.file.name,
+        fileUrl,
+        mimeType: documentParams.file.type,
+        sizeBytes: documentParams.file.size
+      });
+
+      requirementKey = documentTypeToRequirementKey(documentParams.documentType);
+    }
+
+    // 3. Save the full Child record with the proper nested requirementUploads object
     const data = {
       ...childData,
       parentId: user.uid,
       status: 'Pending',
-      requirements: 'Pending Verification',
-      requirementUploads: {
+      requirements: documentParams ? 'Pending Verification' : 'Incomplete',
+      requirementUploads: documentParams ? {
         [requirementKey]: {
           documentId,
           documentType: documentParams.documentType,
@@ -273,7 +279,7 @@ export function ParentDataProvider({ children: reactChildren }: {children: React
           status: DOCUMENT_STATUS.PENDING,
           uploadedAt: serverTimestamp()
         }
-      },
+      } : {},
       schemaVersion: PHASE2_SCHEMA_VERSION,
       submittedAt: serverTimestamp(),
       attendance: []
