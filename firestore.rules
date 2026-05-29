@@ -41,7 +41,7 @@ service cloud.firestore {
     // Parents can read only their child's enrollments.
     match /enrollments/{doc} {
       allow read, write: if isAdmin();
-      allow read: if isTeacher();
+      allow read, update: if isTeacher();
       allow read, update: if isParent() && resource.data.parentId == request.auth.uid;
       allow create: if isParent() && request.resource.data.parentId == request.auth.uid;
     }
