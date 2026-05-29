@@ -28,18 +28,22 @@ export function DocumentVerificationView({ role = 'admin', gradeLevelFilter }: {
 
   useEffect(() => {
     let unsub: () => void;
+    console.log('[DocumentVerificationView] Initializing with role:', role, 'gradeLevelFilter:', gradeLevelFilter);
     if (role === 'teacher' && gradeLevelFilter) {
       unsub = subscribeEnrollmentDocumentsByGradeLevel(gradeLevelFilter, (rows) => {
+        console.log('[DocumentVerificationView] Teacher received documents:', rows.length, rows);
         setDocuments(rows);
         setLoading(false);
       });
     } else if (role === 'teacher' && !gradeLevelFilter) {
       // If teacher but no grade level assigned yet, just stop loading and show empty
+      console.log('[DocumentVerificationView] Teacher has no gradeLevelFilter assigned!');
       setLoading(false);
       setDocuments([]);
       unsub = () => {};
     } else {
       unsub = subscribeAllEnrollmentDocuments((rows) => {
+        console.log('[DocumentVerificationView] Admin received documents:', rows.length, rows);
         setDocuments(rows);
         setLoading(false);
       });
@@ -50,10 +54,15 @@ export function DocumentVerificationView({ role = 'admin', gradeLevelFilter }: {
   }, [role, gradeLevelFilter]);
 
   const filteredDocuments = useMemo(() => {
+    console.log('[DocumentVerificationView] Filtering documents. Total:', documents.length, 'Filter state:', filter);
     return documents.filter((doc) => {
-      const matchesFilter = filter === 'ALL' || doc.status?.toUpperCase() === filter;
+      const docStatus = doc.status?.toUpperCase() || '';
+      const matchesFilter = filter === 'ALL' || docStatus === filter;
       const text = `${doc.studentName} ${doc.fileName} ${doc.gradeLevel}`.toLowerCase();
       const matchesSearch = text.includes(search.toLowerCase());
+      
+      console.log(`[DocumentVerificationView] Doc: ${doc.studentName}, Status: ${doc.status}, Filter: ${filter}, matchesFilter: ${matchesFilter}`);
+      
       return matchesFilter && matchesSearch;
     });
   }, [documents, filter, search]);

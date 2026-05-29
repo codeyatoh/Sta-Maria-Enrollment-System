@@ -9,8 +9,9 @@ service cloud.firestore {
     }
     
     function role() {
-      // Assumes roles are stored in lowercase in the 'users' collection
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      // Assumes roles are stored in lowercase in the 'users' collection, but uses .lower() for safety
+      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return userRole == null ? '' : userRole.lower();
     }
     
     function isAdmin() {
