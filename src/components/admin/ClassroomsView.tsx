@@ -703,7 +703,7 @@ export function ClassroomsView() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-6 w-6 rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 opacity-0 group-hover:opacity-100"
+                                  className="h-6 w-6 rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50"
                                   onClick={() => assignment && deleteAssignment(assignment.id)}
                                   title="Remove Assignment"
                                 >
