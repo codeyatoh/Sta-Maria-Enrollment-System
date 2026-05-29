@@ -107,7 +107,7 @@ service cloud.firestore {
     // Admins can read and write (e.g. approve/reject).
     // Parents can create and read their own uploaded documents.
     match /enrollment_documents/{doc} {
-      allow read, write: if isAdmin();
+      allow read, write: if isAdmin() || isTeacher();
       allow read: if isParent() && resource.data.parentId == request.auth.uid;
       allow create: if isParent() && request.resource.data.parentId == request.auth.uid;
     }

@@ -7,7 +7,8 @@ import { CheckCircle2, CircleDashed, FileText, Search, XCircle, Eye } from 'luci
 import { useAuth } from '../../lib/AuthContext';
 import {
   reviewEnrollmentDocument,
-  subscribeAllEnrollmentDocuments
+  subscribeAllEnrollmentDocuments,
+  subscribeEnrollmentDocumentsByGradeLevel
 } from '../../lib/services/enrollmentDocumentsService';
 import { DOCUMENT_STATUS, DOCUMENT_TYPES, EnrollmentDocument } from '../../lib/schema/phase2';
 
@@ -17,7 +18,7 @@ const STATUS_STYLE: Record<string, string> = {
   REJECTED: 'bg-rose-100 text-rose-700 border-rose-200'
 };
 
-export function DocumentVerificationView() {
+export function DocumentVerificationView({ role = 'admin', gradeLevelFilter }: { role?: 'admin' | 'teacher', gradeLevelFilter?: string }) {
   const { user, userData } = useAuth();
   const [documents, setDocuments] = useState<EnrollmentDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,12 +27,27 @@ export function DocumentVerificationView() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsub = subscribeAllEnrollmentDocuments((rows) => {
-      setDocuments(rows);
+    let unsub: () => void;
+    if (role === 'teacher' && gradeLevelFilter) {
+      unsub = subscribeEnrollmentDocumentsByGradeLevel(gradeLevelFilter, (rows) => {
+        setDocuments(rows);
+        setLoading(false);
+      });
+    } else if (role === 'teacher' && !gradeLevelFilter) {
+      // If teacher but no grade level assigned yet, just stop loading and show empty
       setLoading(false);
-    });
-    return () => unsub();
-  }, []);
+      setDocuments([]);
+      unsub = () => {};
+    } else {
+      unsub = subscribeAllEnrollmentDocuments((rows) => {
+        setDocuments(rows);
+        setLoading(false);
+      });
+    }
+    return () => {
+      if (unsub) unsub();
+    };
+  }, [role, gradeLevelFilter]);
 
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => {

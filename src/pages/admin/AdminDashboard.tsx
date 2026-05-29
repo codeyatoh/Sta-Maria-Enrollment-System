@@ -21,7 +21,7 @@ import { UsersView } from '../../components/admin/UsersView';
 import { ClassroomsView } from '../../components/admin/ClassroomsView';
 import { SubjectsView } from '../../components/admin/SubjectsView';
 import { ReportsView } from '../../components/admin/ReportsView';
-import { DocumentVerificationView } from '../../components/admin/DocumentVerificationView';
+import { DocumentVerificationView } from '../../components/shared/DocumentVerificationView';
 import { SetupWizard } from '../../components/admin/SetupWizard';
 import { HealthDashboardView } from '../../components/admin/HealthDashboardView';
 import { signOut } from 'firebase/auth';

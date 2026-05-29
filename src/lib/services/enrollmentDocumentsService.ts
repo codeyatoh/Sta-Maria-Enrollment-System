@@ -149,6 +149,34 @@ export function subscribeAllEnrollmentDocuments(
   });
 }
 
+export function subscribeEnrollmentDocumentsByGradeLevel(
+  gradeLevel: string,
+  onData: (docs: EnrollmentDocument[]) => void,
+  onError?: (error: Error) => void
+) {
+  const q = query(
+    collection(db, ENROLLMENT_DOCUMENTS_COLLECTION),
+    where('gradeLevel', '==', gradeLevel)
+  );
+  return onSnapshot(
+    q,
+    (snap) => {
+      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as EnrollmentDocument));
+      docs.sort((a, b) => {
+        const aTime = (a.uploadedAt as { seconds?: number })?.seconds ?? 0;
+        const bTime = (b.uploadedAt as { seconds?: number })?.seconds ?? 0;
+        return bTime - aTime;
+      });
+      onData(docs);
+    },
+    (error) => {
+      console.error('[enrollmentDocumentsService] subscribeEnrollmentDocumentsByGradeLevel error:', error);
+      onError?.(error);
+      onData([]);
+    }
+  );
+}
+
 export async function reviewEnrollmentDocument(params: {
   documentId: string;
   enrollmentId: string;

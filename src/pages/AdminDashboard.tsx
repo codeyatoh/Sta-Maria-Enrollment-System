@@ -20,7 +20,7 @@ import { ClassroomsView } from '../components/admin/ClassroomsView';
 import { SubjectsView } from '../components/admin/SubjectsView';
 import { ReportsView } from '../components/admin/ReportsView';
 import { SetupWizard } from '../components/admin/SetupWizard';
-import { DocumentVerificationView } from '../components/admin/DocumentVerificationView';
+import { DocumentVerificationView } from '../components/shared/DocumentVerificationView';
 function AdminDashboardContent() {
   const navigate = useNavigate();
   const { setupComplete } = useAdminData();

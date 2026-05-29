@@ -59,6 +59,7 @@ type TeacherContextType = {
   updateStudentGrade: (id: string, subjectCode: string, grade: number) => Promise<void>;
   updateStudentBmi: (id: string, height: string, weight: string) => Promise<void>;
   loading: boolean;
+  currentGradeLevel: string;
 };
 
 const TeacherContext = createContext<TeacherContextType | undefined>(undefined);
@@ -69,6 +70,7 @@ export function TeacherDataProvider({ children }: { children: ReactNode }) {
   const [subjects, setSubjects] = useState<TeacherSubject[]>([]);
   const [attendance, setAttendance] = useState<AttendanceEntry[]>([]);
   const [currentSection, setCurrentSection] = useState('');
+  const [currentGradeLevel, setCurrentGradeLevel] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -76,6 +78,7 @@ export function TeacherDataProvider({ children }: { children: ReactNode }) {
       setStudents([]);
       setAttendance([]);
       setCurrentSection('');
+      setCurrentGradeLevel('');
       setLoading(false);
       return;
     }
@@ -95,6 +98,7 @@ export function TeacherDataProvider({ children }: { children: ReactNode }) {
         getDoc(doc(db, 'sections', sectionId)).then((secSnap) => {
           if (isCleanedUp || !secSnap.exists()) return;
           const gradeLevel = secSnap.data().gradeLevel;
+          setCurrentGradeLevel(gradeLevel);
 
           let pendingStudents: Student[] = [];
           let enrolledStudents: Student[] = [];
@@ -145,6 +149,7 @@ export function TeacherDataProvider({ children }: { children: ReactNode }) {
         setStudents([]);
         setAttendance([]);
         setCurrentSection('');
+        setCurrentGradeLevel('');
         setLoading(false);
       }
     });
@@ -204,7 +209,8 @@ export function TeacherDataProvider({ children }: { children: ReactNode }) {
         updateStudentStatus,
         updateStudentGrade,
         updateStudentBmi,
-        loading
+        loading,
+        currentGradeLevel
       }}>
       {children}
     </TeacherContext.Provider>
