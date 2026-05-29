@@ -49,7 +49,7 @@ import { db } from '../../lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { firebaseConfig } from '../../lib/firebase';
 
 // Secondary app for admin to create users without being logged out
@@ -60,6 +60,8 @@ export function UsersView() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const getDateString = (ts: unknown) => {
     if (!ts) return 'N/A';
@@ -182,6 +184,20 @@ export function UsersView() {
     }
   };
 
+  const handlePasswordReset = async () => {
+    if (!selectedUser?.email) return;
+    try {
+      setIsResettingPassword(true);
+      await sendPasswordResetEmail(secondaryAuth, selectedUser.email);
+      alert("Password reset email has been sent to " + selectedUser.email);
+    } catch (err) {
+      console.error("Error sending password reset email:", err);
+      alert("Failed to send password reset email.");
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   const [roleFilter, setRoleFilter] = useState('All');
   
   const totalUsers = users.length;
@@ -294,7 +310,7 @@ export function UsersView() {
                           variant="ghost"
                           size="icon"
                           className="h-9 w-9 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                          onClick={() => deleteUser(user.id)}
+                          onClick={() => setUserToDelete(user)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -599,6 +615,18 @@ export function UsersView() {
                 </div>
               </div>
 
+              <div className="pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                  onClick={handlePasswordReset}
+                  disabled={isResettingPassword}
+                >
+                  {isResettingPassword ? "Sending..." : "Send Password Reset Email"}
+                </Button>
+              </div>
+
               <DialogFooter className="pt-4 border-t">
                 <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
                 <Button type="submit">Update User</Button>
@@ -653,6 +681,42 @@ export function UsersView() {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-rose-600 flex items-center gap-2">
+              <Trash2 className="w-5 h-5" />
+              Confirm Deletion
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-slate-600">
+              Are you sure you want to delete the account for <strong className="text-slate-900">{userToDelete?.firstName} {userToDelete?.lastName}</strong>?
+            </p>
+            <p className="text-sm text-slate-600 mt-2">
+              This action cannot be undone. All associated data will be permanently removed.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setUserToDelete(null)}>Cancel</Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="bg-rose-600 hover:bg-rose-700"
+              onClick={() => {
+                if (userToDelete) {
+                  deleteUser(userToDelete.id);
+                  setUserToDelete(null);
+                }
+              }}
+            >
+              Yes, Delete Account
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>);
