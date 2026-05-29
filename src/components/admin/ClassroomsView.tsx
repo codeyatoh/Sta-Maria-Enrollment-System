@@ -125,6 +125,25 @@ export function ClassroomsView() {
 
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newAssign.teacherId || !newAssign.classroomId || !newAssign.sectionId) {
+      alert("Please select a teacher, classroom, and section.");
+      return;
+    }
+
+    // Check if section already has a teacher
+    const existingSectionAssignment = assignments.find(a => a.sectionId === newAssign.sectionId);
+    if (existingSectionAssignment) {
+      alert("This section already has a teacher assigned. Please remove the current assignment first.");
+      return;
+    }
+
+    // Check if teacher is already assigned to another section
+    const existingTeacherAssignment = assignments.find(a => a.teacherId === newAssign.teacherId);
+    if (existingTeacherAssignment) {
+      alert("This teacher is already assigned to a section. Please remove their current assignment first.");
+      return;
+    }
+
     try {
       await addAssignment(newAssign);
       setIsAssignOpen(false);
@@ -170,7 +189,7 @@ export function ClassroomsView() {
                 <div className="space-y-2">
                   <Label>Teacher</Label>
                   <Select
-                    value={newAssign.teacherId}
+                    value={newAssign.teacherId || undefined}
                     onValueChange={(v) =>
                     setNewAssign({
                       ...newAssign,
@@ -195,7 +214,7 @@ export function ClassroomsView() {
                 <div className="space-y-2">
                   <Label>Classroom</Label>
                   <Select
-                    value={newAssign.classroomId}
+                    value={newAssign.classroomId || undefined}
                     onValueChange={(v) =>
                     setNewAssign({
                       ...newAssign,
@@ -221,7 +240,7 @@ export function ClassroomsView() {
                 <div className="space-y-2">
                   <Label>Section</Label>
                   <Select
-                    value={newAssign.sectionId}
+                    value={newAssign.sectionId || undefined}
                     onValueChange={(v) =>
                     setNewAssign({
                       ...newAssign,
@@ -292,7 +311,7 @@ export function ClassroomsView() {
                         {newSection.gradeLevel ? `Grade ${newSection.gradeLevel}` : undefined}
                       </SelectValue></SelectTrigger>
                       <SelectContent className="max-h-[200px] overflow-y-auto">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
+                        {[1, 2, 3, 4, 5, 6].map(level => (
                           <SelectItem key={level} value={level.toString()}>Grade {level}</SelectItem>
                         ))}
                       </SelectContent>
@@ -314,7 +333,7 @@ export function ClassroomsView() {
                 <div className="space-y-2">
                   <Label>Classroom</Label>
                   <Select
-                    value={newSection.classroomId}
+                    value={newSection.classroomId || undefined}
                     onValueChange={(v) =>
                     setNewSection({
                       ...newSection,
@@ -504,7 +523,7 @@ export function ClassroomsView() {
                           {editingSection.gradeLevel ? `Grade ${editingSection.gradeLevel}` : undefined}
                         </SelectValue></SelectTrigger>
                         <SelectContent className="max-h-[200px] overflow-y-auto">
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
+                          {[1, 2, 3, 4, 5, 6].map(level => (
                             <SelectItem key={level} value={level.toString()}>Grade {level}</SelectItem>
                           ))}
                         </SelectContent>
