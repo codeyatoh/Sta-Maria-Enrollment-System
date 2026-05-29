@@ -202,7 +202,7 @@ export function ParentDataProvider({ children: reactChildren }: {children: React
     };
 
     if (preGeneratedId) {
-      await setDoc(doc(db, 'enrollments', preGeneratedId), data);
+      await setDoc(doc(db, 'enrollments', preGeneratedId), data, { merge: true });
       return preGeneratedId;
     } else {
       const docRef = await addDoc(collection(db, 'enrollments'), data);

@@ -6,6 +6,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where
 } from 'firebase/firestore';
@@ -38,6 +39,31 @@ function documentTypeToRequirementKey(type: DocumentType): string {
   return 'other';
 }
 
+export async function uploadToCloudinary(file: File): Promise<string> {
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+  if (!cloudName || !uploadPreset) {
+    throw new Error('Cloudinary configuration is missing in environment variables.');
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', uploadPreset);
+  
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+    method: 'POST',
+    body: formData
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to upload document to Cloudinary');
+  }
+
+  const data = await response.json();
+  return data.secure_url;
+}
+
 export async function uploadEnrollmentRequirementDocument(params: {
   enrollmentId: string;
   parentId: string;
@@ -50,29 +76,7 @@ export async function uploadEnrollmentRequirementDocument(params: {
   const validationError = validateRequirementUpload(file);
   if (validationError) throw new Error(validationError);
 
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-
-  if (!cloudName || !uploadPreset) {
-    throw new Error('Cloudinary configuration is missing in environment variables.');
-  }
-
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('upload_preset', uploadPreset);
-  // Optional: add some tags or context if configured in preset
-  
-  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
-    method: 'POST',
-    body: formData
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to upload document to Cloudinary');
-  }
-
-  const data = await response.json();
-  const fileUrl = data.secure_url;
+  const fileUrl = await uploadToCloudinary(file);
 
   const documentRef = await addDoc(collection(db, ENROLLMENT_DOCUMENTS_COLLECTION), {
     schemaVersion: PHASE2_SCHEMA_VERSION,
@@ -91,8 +95,9 @@ export async function uploadEnrollmentRequirementDocument(params: {
   });
 
   const requirementKey = documentTypeToRequirementKey(documentType);
-  await updateDoc(doc(db, 'enrollments', enrollmentId), {
+  await setDoc(doc(db, 'enrollments', enrollmentId), {
     schemaVersion: PHASE2_SCHEMA_VERSION,
+    parentId, // Required to satisfy Firestore create rules
     [`requirementUploads.${requirementKey}`]: {
       documentId: documentRef.id,
       documentType,
@@ -100,7 +105,7 @@ export async function uploadEnrollmentRequirementDocument(params: {
       status: DOCUMENT_STATUS.PENDING,
       uploadedAt: serverTimestamp()
     }
-  });
+  }, { merge: true });
 
   return documentRef.id;
 }
