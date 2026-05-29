@@ -135,15 +135,6 @@ export function ChildDetailView({
           <Badge variant="outline" className="border-slate-300 text-slate-600 bg-white/60 font-semibold px-3 py-1 rounded-full shadow-sm">
             Grade {child.gradeLevel}
           </Badge>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="ml-auto rounded-xl border-primary/20 text-primary hover:bg-primary/5"
-            onClick={handleOpenEdit}
-          >
-            <Edit className="w-4 h-4 mr-2" />
-            Edit Info
-          </Button>
         </div>
       </header>
 
@@ -174,17 +165,29 @@ export function ChildDetailView({
           )}
 
           <Tabs defaultValue="personal" className="w-full">
-            <TabsList className="grid w-full sm:max-w-md grid-cols-3 mb-8 p-1.5 bg-slate-200/50 rounded-2xl shadow-inner border border-slate-200">
-              <TabsTrigger value="personal" className="text-xs sm:text-sm font-semibold rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all">
-                <User className="w-3.5 h-3.5 mr-2 hidden sm:inline" /> Personal Info
-              </TabsTrigger>
-              <TabsTrigger value="medical" className="text-xs sm:text-sm font-semibold rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all">
-                <HeartPulse className="w-3.5 h-3.5 mr-2 hidden sm:inline" /> Medical
-              </TabsTrigger>
-              <TabsTrigger value="attendance" className="text-xs sm:text-sm font-semibold rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all">
-                <CalendarCheck className="w-3.5 h-3.5 mr-2 hidden sm:inline" /> Attendance
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+              <TabsList className="grid w-full sm:w-[450px] grid-cols-3 p-1.5 bg-slate-200/50 rounded-2xl shadow-inner border border-slate-200">
+                <TabsTrigger value="personal" className="text-xs sm:text-sm font-semibold rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all">
+                  <User className="w-3.5 h-3.5 mr-2 hidden sm:inline" /> Personal Info
+                </TabsTrigger>
+                <TabsTrigger value="medical" className="text-xs sm:text-sm font-semibold rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all">
+                  <HeartPulse className="w-3.5 h-3.5 mr-2 hidden sm:inline" /> Medical
+                </TabsTrigger>
+                <TabsTrigger value="attendance" className="text-xs sm:text-sm font-semibold rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all">
+                  <CalendarCheck className="w-3.5 h-3.5 mr-2 hidden sm:inline" /> Attendance
+                </TabsTrigger>
+              </TabsList>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full sm:w-auto rounded-xl border-primary/20 text-primary hover:bg-primary/5 bg-white shadow-sm"
+                onClick={handleOpenEdit}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Info
+              </Button>
+            </div>
 
             <TabsContent value="personal" className="mt-0 outline-none">
               <Card className="p-6 sm:p-8 bg-white border-slate-200/60 shadow-sm rounded-3xl space-y-10 hover:shadow-md transition-shadow">
