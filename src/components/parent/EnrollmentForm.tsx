@@ -77,7 +77,9 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
       await uploadRequirementDocument({
         enrollmentId,
         documentType: DOCUMENT_TYPES.PSA_BIRTH_CERTIFICATE,
-        file: birthCertFile
+        file: birthCertFile,
+        studentName: `${formData.firstName} ${formData.lastName}`,
+        gradeLevel: formData.gradeLevel
       });
       onComplete();
     } catch (error) {

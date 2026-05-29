@@ -94,6 +94,8 @@ type ParentContextType = {
     enrollmentId: string;
     documentType: DocumentType;
     file: File;
+    studentName?: string;
+    gradeLevel?: string;
   }) => Promise<void>;
   loading: boolean;
   documentsLoading: boolean;
@@ -200,17 +202,26 @@ export function ParentDataProvider({ children: reactChildren }: {children: React
     enrollmentId: string;
     documentType: DocumentType;
     file: File;
+    studentName?: string;
+    gradeLevel?: string;
   }) => {
     if (!user) return;
 
-    const child = children.find((c) => c.id === params.enrollmentId);
-    if (!child) throw new Error('Student enrollment not found.');
+    let sName = params.studentName;
+    let gLevel = params.gradeLevel;
+
+    if (!sName || !gLevel) {
+      const child = children.find((c) => c.id === params.enrollmentId);
+      if (!child) throw new Error('Student enrollment not found.');
+      sName = `${child.firstName} ${child.lastName}`;
+      gLevel = child.gradeLevel;
+    }
 
     await uploadEnrollmentRequirementDocument({
       enrollmentId: params.enrollmentId,
       parentId: user.uid,
-      studentName: `${child.firstName} ${child.lastName}`,
-      gradeLevel: child.gradeLevel,
+      studentName: sName,
+      gradeLevel: gLevel,
       documentType: params.documentType,
       file: params.file
     });
