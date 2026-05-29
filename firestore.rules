@@ -41,13 +41,16 @@ service cloud.firestore {
     match /enrollments/{doc} {
       allow read, write: if isAdmin();
       allow read: if isTeacher();
-      allow read: if isParent() && resource.data.parentId == request.auth.uid;
+      allow read, update: if isParent() && resource.data.parentId == request.auth.uid;
+      allow create: if isParent() && request.resource.data.parentId == request.auth.uid;
     }
     
     // Attendance
     // Admins and Teachers can manage attendance.
     match /attendance/{doc} {
       allow read, write: if isAdmin() || isTeacher();
+      // Parents can read if they own the enrollment associated with this attendance record
+      allow read: if isParent() && get(/databases/$(database)/documents/enrollments/$(resource.data.studentId)).data.parentId == request.auth.uid;
     }
     
     // Grades
@@ -105,8 +108,8 @@ service cloud.firestore {
     // Parents can create and read their own uploaded documents.
     match /enrollment_documents/{doc} {
       allow read, write: if isAdmin();
-      allow read: if isParent() && resource.data.uploadedBy == request.auth.uid;
-      allow create: if isParent();
+      allow read: if isParent() && resource.data.parentId == request.auth.uid;
+      allow create: if isParent() && request.resource.data.parentId == request.auth.uid;
     }
 
     // Health Records (Phase 7 Addition)
