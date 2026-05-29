@@ -273,16 +273,18 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                       </Select>
                     </div>
                     <div className="space-y-2 sm:col-span-2">
-                      <Label>Learner Reference Number (LRN)</Label>
+                      <Label>Learner Reference Number (LRN) <span className="text-red-500">*</span></Label>
                       <Input
-                      value={formData.lrn}
-                      onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        lrn: e.target.value
-                      })
-                      }
-                      placeholder="Optional for new students (Must match PSA Certificate)" />
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={12}
+                        value={formData.lrn}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, ''); // Only digits allowed
+                          setFormData({ ...formData, lrn: val });
+                        }}
+                        placeholder="Enter 12-digit LRN (Must match PSA Certificate)" 
+                      />
                     </div>
 
                     <div className="space-y-4 sm:col-span-2 p-4 border border-border rounded-lg bg-muted/30">
@@ -337,7 +339,8 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                     disabled={
                     !formData.firstName ||
                     !formData.lastName ||
-                    !formData.gradeLevel
+                    !formData.gradeLevel ||
+                    formData.lrn.length !== 12
                     }>
                     
                       Next Step <ArrowRight className="w-4 h-4 ml-2" />
