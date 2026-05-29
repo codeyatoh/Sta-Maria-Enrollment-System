@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import {
+  DOCUMENT_STATUS,
   PHASE2_SCHEMA_VERSION,
   DocumentType,
   EnrollmentDocument,
@@ -24,7 +25,10 @@ import {
 } from './services/attendanceCompatibilityService';
 import {
   subscribeParentEnrollmentDocuments,
-  uploadEnrollmentRequirementDocument
+  addEnrollmentDocumentRecord,
+  documentTypeToRequirementKey,
+  uploadToCloudinary,
+  validateRequirementUpload
 } from './services/enrollmentDocumentsService';
 
 export type AttendanceRecord = {
@@ -100,6 +104,13 @@ type ParentContextType = {
     studentName?: string;
     gradeLevel?: string;
   }) => Promise<void>;
+  submitFullEnrollment: (
+    childData: Omit<Child, 'id' | 'status' | 'requirements' | 'submittedAt' | 'attendance' | 'parentId'>,
+    documentParams: {
+      documentType: DocumentType;
+      file: File;
+    }
+  ) => Promise<string>;
   loading: boolean;
   documentsLoading: boolean;
 };
@@ -214,6 +225,65 @@ export function ParentDataProvider({ children: reactChildren }: {children: React
     await updateDoc(doc(db, 'enrollments', id), updates);
   };
 
+  const submitFullEnrollment = async (
+    childData: Omit<Child, 'id' | 'status' | 'requirements' | 'submittedAt' | 'attendance' | 'parentId'>,
+    documentParams: {
+      documentType: DocumentType;
+      file: File;
+    }
+  ): Promise<string> => {
+    if (!user) throw new Error('Not authenticated');
+
+    const validationError = validateRequirementUpload(documentParams.file);
+    if (validationError) throw new Error(validationError);
+
+    // 1. Upload to Cloudinary FIRST
+    const fileUrl = await uploadToCloudinary(documentParams.file);
+
+    // 2. Generate ID for the enrollment
+    const enrollmentId = generateEnrollmentId();
+    const studentName = `${childData.firstName} ${childData.lastName}`;
+    const requirementKey = documentTypeToRequirementKey(documentParams.documentType);
+
+    // 3. Add the Document Record to Firestore
+    const documentId = await addEnrollmentDocumentRecord({
+      enrollmentId,
+      parentId: user.uid,
+      studentName,
+      gradeLevel: childData.gradeLevel,
+      documentType: documentParams.documentType,
+      fileName: documentParams.file.name,
+      fileUrl,
+      mimeType: documentParams.file.type,
+      sizeBytes: documentParams.file.size
+    });
+
+    // 4. Save the full Child record with the proper nested requirementUploads object
+    const data = {
+      ...childData,
+      parentId: user.uid,
+      status: 'Pending',
+      requirements: 'Pending Verification',
+      requirementUploads: {
+        [requirementKey]: {
+          documentId,
+          documentType: documentParams.documentType,
+          fileName: documentParams.file.name,
+          status: DOCUMENT_STATUS.PENDING,
+          uploadedAt: serverTimestamp()
+        }
+      },
+      schemaVersion: PHASE2_SCHEMA_VERSION,
+      submittedAt: serverTimestamp(),
+      attendance: []
+    };
+
+    // Use setDoc without merge since this is a brand new document!
+    await setDoc(doc(db, 'enrollments', enrollmentId), data);
+
+    return enrollmentId;
+  };
+
   const uploadRequirementDocument = async (params: {
     enrollmentId: string;
     documentType: DocumentType;
@@ -233,14 +303,35 @@ export function ParentDataProvider({ children: reactChildren }: {children: React
       gLevel = child.gradeLevel;
     }
 
-    await uploadEnrollmentRequirementDocument({
+    const validationError = validateRequirementUpload(params.file);
+    if (validationError) throw new Error(validationError);
+
+    const fileUrl = await uploadToCloudinary(params.file);
+    const requirementKey = documentTypeToRequirementKey(params.documentType);
+
+    const documentId = await addEnrollmentDocumentRecord({
       enrollmentId: params.enrollmentId,
       parentId: user.uid,
       studentName: sName,
       gradeLevel: gLevel,
       documentType: params.documentType,
-      file: params.file
+      fileName: params.file.name,
+      fileUrl,
+      mimeType: params.file.type,
+      sizeBytes: params.file.size
     });
+
+    await setDoc(doc(db, 'enrollments', params.enrollmentId), {
+      schemaVersion: PHASE2_SCHEMA_VERSION,
+      parentId: user.uid,
+      [`requirementUploads.${requirementKey}`]: {
+        documentId,
+        documentType: params.documentType,
+        fileName: params.file.name,
+        status: DOCUMENT_STATUS.PENDING,
+        uploadedAt: serverTimestamp()
+      }
+    }, { merge: true });
   };
 
   return (
@@ -252,6 +343,7 @@ export function ParentDataProvider({ children: reactChildren }: {children: React
         generateEnrollmentId,
         updateChild,
         uploadRequirementDocument,
+        submitFullEnrollment,
         loading,
         documentsLoading
       }}>

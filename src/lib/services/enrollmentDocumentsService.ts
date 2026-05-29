@@ -34,7 +34,7 @@ export function validateRequirementUpload(file: File): string | null {
   return null;
 }
 
-function documentTypeToRequirementKey(type: DocumentType): string {
+export function documentTypeToRequirementKey(type: DocumentType): string {
   if (type === DOCUMENT_TYPES.PSA_BIRTH_CERTIFICATE) return 'psaBirthCertificate';
   return 'other';
 }
@@ -64,19 +64,18 @@ export async function uploadToCloudinary(file: File): Promise<string> {
   return data.secure_url;
 }
 
-export async function uploadEnrollmentRequirementDocument(params: {
+export async function addEnrollmentDocumentRecord(params: {
   enrollmentId: string;
   parentId: string;
   studentName: string;
   gradeLevel: string;
   documentType: DocumentType;
-  file: File;
+  fileName: string;
+  fileUrl: string;
+  mimeType: string;
+  sizeBytes: number;
 }) {
-  const { enrollmentId, parentId, studentName, gradeLevel, documentType, file } = params;
-  const validationError = validateRequirementUpload(file);
-  if (validationError) throw new Error(validationError);
-
-  const fileUrl = await uploadToCloudinary(file);
+  const { enrollmentId, parentId, studentName, gradeLevel, documentType, fileName, fileUrl, mimeType, sizeBytes } = params;
 
   const documentRef = await addDoc(collection(db, ENROLLMENT_DOCUMENTS_COLLECTION), {
     schemaVersion: PHASE2_SCHEMA_VERSION,
@@ -85,27 +84,14 @@ export async function uploadEnrollmentRequirementDocument(params: {
     studentName,
     gradeLevel,
     documentType,
-    fileName: file.name,
+    fileName,
     fileUrl,
-    mimeType: file.type,
-    sizeBytes: file.size,
+    mimeType,
+    sizeBytes,
     status: DOCUMENT_STATUS.PENDING,
     uploadedAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
-
-  const requirementKey = documentTypeToRequirementKey(documentType);
-  await setDoc(doc(db, 'enrollments', enrollmentId), {
-    schemaVersion: PHASE2_SCHEMA_VERSION,
-    parentId, // Required to satisfy Firestore create rules
-    [`requirementUploads.${requirementKey}`]: {
-      documentId: documentRef.id,
-      documentType,
-      fileName: file.name,
-      status: DOCUMENT_STATUS.PENDING,
-      uploadedAt: serverTimestamp()
-    }
-  }, { merge: true });
 
   return documentRef.id;
 }

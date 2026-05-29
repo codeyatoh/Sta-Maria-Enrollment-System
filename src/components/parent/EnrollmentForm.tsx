@@ -16,7 +16,7 @@ import { CheckCircle2, ArrowRight, ArrowLeft, Upload, FileText } from 'lucide-re
 import { useParentData } from '../../lib/parentData';
 import { DOCUMENT_TYPES } from '../../lib/schema/phase2';
 export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
-  const { addChild, generateEnrollmentId, uploadRequirementDocument } = useParentData();
+  const { submitFullEnrollment } = useParentData();
   const [step, setStep] = useState(1);
   const [birthCertFile, setBirthCertFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -73,21 +73,10 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
     setIsSubmitting(true);
     setUploadError(null);
     try {
-      // 1. Generate ID first
-      const enrollmentId = generateEnrollmentId();
-
-      // 2. Upload document FIRST
-      await uploadRequirementDocument({
-        enrollmentId,
+      await submitFullEnrollment(formData, {
         documentType: DOCUMENT_TYPES.PSA_BIRTH_CERTIFICATE,
-        file: birthCertFile,
-        studentName: `${formData.firstName} ${formData.lastName}`,
-        gradeLevel: formData.gradeLevel
+        file: birthCertFile
       });
-
-      // 3. Document successfully uploaded, now add the child!
-      await addChild(formData, enrollmentId);
-
       onComplete();
     } catch (error) {
       console.error("Error submitting enrollment:", error);
