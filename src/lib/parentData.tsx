@@ -8,6 +8,7 @@ import {
   where, 
   addDoc, 
   updateDoc, 
+  setDoc,
   doc, 
   serverTimestamp 
 } from 'firebase/firestore';
@@ -87,8 +88,10 @@ type ParentContextType = {
   addChild: (
   child: Omit<
     Child,
-    'id' | 'status' | 'requirements' | 'submittedAt' | 'attendance' | 'parentId'>)
-  => Promise<string>;
+    'id' | 'status' | 'requirements' | 'submittedAt' | 'attendance' | 'parentId'>,
+    preGeneratedId?: string
+  ) => Promise<string>;
+  generateEnrollmentId: () => string;
   updateChild: (id: string, updates: Partial<Child>) => Promise<void>;
   uploadRequirementDocument: (params: {
     enrollmentId: string;
@@ -177,21 +180,34 @@ export function ParentDataProvider({ children: reactChildren }: {children: React
     };
   }, [user]);
 
+  const generateEnrollmentId = () => {
+    return doc(collection(db, 'enrollments')).id;
+  };
+
   const addChild = async (
-    childData: Omit<Child, 'id' | 'status' | 'requirements' | 'submittedAt' | 'attendance' | 'parentId'>
+    childData: Omit<Child, 'id' | 'status' | 'requirements' | 'submittedAt' | 'attendance' | 'parentId'>,
+    preGeneratedId?: string
   ): Promise<string> => {
     if (!user) throw new Error("Not authenticated");
-    const docRef = await addDoc(collection(db, 'enrollments'), {
+    
+    const data = {
       ...childData,
       parentId: user.uid,
       status: 'Pending',
-      requirements: 'Complete',
+      requirements: 'Pending Verification',
       requirementUploads: {},
       schemaVersion: PHASE2_SCHEMA_VERSION,
       submittedAt: serverTimestamp(),
       attendance: []
-    });
-    return docRef.id;
+    };
+
+    if (preGeneratedId) {
+      await setDoc(doc(db, 'enrollments', preGeneratedId), data);
+      return preGeneratedId;
+    } else {
+      const docRef = await addDoc(collection(db, 'enrollments'), data);
+      return docRef.id;
+    }
   };
 
   const updateChild = async (id: string, updates: Partial<Child>) => {
@@ -233,6 +249,7 @@ export function ParentDataProvider({ children: reactChildren }: {children: React
         children,
         documents,
         addChild,
+        generateEnrollmentId,
         updateChild,
         uploadRequirementDocument,
         loading,
