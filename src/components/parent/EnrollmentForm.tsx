@@ -940,8 +940,7 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                     </Button>
                     <Button 
                       onClick={() => setStep(6)} 
-                      className="w-full sm:w-auto"
-                      disabled={!birthCertFile}>
+                      className="w-full sm:w-auto">
                       Review <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
@@ -1021,7 +1020,7 @@ export function EnrollmentForm({ onComplete }: {onComplete: () => void;}) {
                         {birthCertFile ? (
                           <span className="text-emerald-600 font-medium">Ready to upload ({birthCertFile.name})</span>
                         ) : (
-                          <span className="text-rose-600 font-medium">Missing</span>
+                          <span className="text-amber-600 font-medium">To be submitted later</span>
                         )}
                       </p>
                     </div>
