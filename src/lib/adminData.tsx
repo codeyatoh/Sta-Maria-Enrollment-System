@@ -164,6 +164,11 @@ export function AdminDataProvider({ children }: {children: ReactNode;}) {
   };
 
   const deleteClassroom = async (id: string) => {
+    // Cascade delete sections and assignments
+    const sectionsToDelete = sections.filter(s => s.classroomId === id);
+    for (const s of sectionsToDelete) {
+      await deleteSection(s.id);
+    }
     await deleteDoc(doc(db, 'classrooms', id));
   };
 
@@ -176,6 +181,11 @@ export function AdminDataProvider({ children }: {children: ReactNode;}) {
   };
 
   const deleteSection = async (id: string) => {
+    // Cascade delete assignments for this section
+    const assignmentsToDelete = assignments.filter(a => a.sectionId === id);
+    for (const a of assignmentsToDelete) {
+      await deleteAssignment(a.id);
+    }
     await deleteDoc(doc(db, 'sections', id));
   };
 

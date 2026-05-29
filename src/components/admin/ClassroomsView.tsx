@@ -137,9 +137,25 @@ export function ClassroomsView() {
       return;
     }
 
-    // Check if teacher is already assigned to another section
-    const existingTeacherAssignment = assignments.find(a => a.teacherId === newAssign.teacherId);
-    if (existingTeacherAssignment) {
+    // Check if teacher is already assigned to another section (and cleanup ghost assignments)
+    const existingTeacherAssignments = assignments.filter(a => a.teacherId === newAssign.teacherId);
+    let isAlreadyAssigned = false;
+    
+    for (const assignment of existingTeacherAssignments) {
+      const sectionExists = sections.some(s => s.id === assignment.sectionId);
+      if (sectionExists) {
+        isAlreadyAssigned = true;
+      } else {
+        // This is a ghost/orphaned assignment (section was deleted). Let's clean it up automatically!
+        try {
+          await deleteAssignment(assignment.id);
+        } catch (e) {
+          console.error("Failed to cleanup ghost assignment", e);
+        }
+      }
+    }
+
+    if (isAlreadyAssigned) {
       alert("This teacher is already assigned to a section. Please remove their current assignment first.");
       return;
     }
