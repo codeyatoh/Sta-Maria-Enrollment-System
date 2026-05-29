@@ -69,7 +69,8 @@ service cloud.firestore {
       allow read, write: if isAdmin() || isTeacher();
     }
     match /assignments/{doc} {
-      allow read, write: if isAdmin() || isTeacher();
+      allow read: if isAuthed();
+      allow write: if isAdmin();
     }
     match /subjects/{doc} {
       allow read, write: if isAdmin() || isTeacher();
