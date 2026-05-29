@@ -83,78 +83,99 @@ export function TeacherDataProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Track all inner unsub functions so they can be properly cleaned up
+    let unsubPending: () => void = () => { /* no-op */ };
+    let unsubEnrolled: () => void = () => { /* no-op */ };
+    let unsubAttendance: () => void = () => { /* no-op */ };
+    let unsubSubjects: () => void = () => { /* no-op */ };
+    let cancelled = false;
+
     // 1. Get Teacher's Assignment
     const qAssign = query(collection(db, 'assignments'), where('teacherId', '==', user.uid));
-    const unsubAssign = onSnapshot(qAssign, (snap) => {
-      if (!snap.empty) {
-        const assign = snap.docs[0].data();
-        const sectionId = assign.sectionId;
-        setCurrentSection(sectionId);
+    const unsubAssign = onSnapshot(qAssign, async (snap) => {
+      // Clean up previous inner listeners before setting up new ones
+      unsubPending();
+      unsubEnrolled();
+      unsubAttendance();
+      unsubSubjects();
 
-        let isCleanedUp = false;
-        let unsubPending = () => { /* intentional no-op */ };
-        let unsubEnrolled = () => { /* intentional no-op */ };
-
-        getDoc(doc(db, 'sections', sectionId)).then((secSnap) => {
-          if (isCleanedUp || !secSnap.exists()) return;
-          const gradeLevel = secSnap.data().gradeLevel;
-          setCurrentGradeLevel(gradeLevel);
-
-          let pendingStudents: Student[] = [];
-          let enrolledStudents: Student[] = [];
-
-          // 2a. Get Pending Students for this gradeLevel
-          const qPending = query(
-            collection(db, 'enrollments'), 
-            where('gradeLevel', '==', gradeLevel), 
-            where('status', '==', 'Pending')
-          );
-          unsubPending = onSnapshot(qPending, (sSnap) => {
-            pendingStudents = sSnap.docs.map(d => ({ id: d.id, ...d.data() } as Student));
-            setStudents([...pendingStudents, ...enrolledStudents]);
-          });
-
-          // 2b. Get Enrolled Students for this sectionId
-          const qEnrolled = query(
-            collection(db, 'enrollments'), 
-            where('sectionId', '==', sectionId), 
-            where('status', 'in', ['Enrolled', 'Dropped', 'Transferred'])
-          );
-          unsubEnrolled = onSnapshot(qEnrolled, (sSnap) => {
-            enrolledStudents = sSnap.docs.map(d => ({ id: d.id, ...d.data() } as Student));
-            setStudents([...pendingStudents, ...enrolledStudents]);
-          });
-        });
-
-        // 3. Get Attendance for this section
-        const qAttendance = query(collection(db, 'attendance'), where('sectionId', '==', sectionId));
-        const unsubAttendance = onSnapshot(qAttendance, (aSnap) => {
-          setAttendance(aSnap.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceEntry)));
-        });
-
-        // 4. Get Subjects
-        const unsubSubjects = onSnapshot(query(collection(db, 'subjects')), (sSnap) => {
-          setSubjects(sSnap.docs.map(d => ({ id: d.id, ...d.data() } as TeacherSubject)));
-        });
-
-        setLoading(false);
-        return () => {
-          isCleanedUp = true;
-          unsubPending();
-          unsubEnrolled();
-          unsubAttendance();
-          unsubSubjects();
-        };
-      } else {
+      if (snap.empty) {
         setStudents([]);
         setAttendance([]);
         setCurrentSection('');
         setCurrentGradeLevel('');
         setLoading(false);
+        return;
       }
+
+      const assign = snap.docs[0].data();
+      const sectionId = assign.sectionId;
+      setCurrentSection(sectionId);
+
+      // 2. Get section gradeLevel
+      try {
+        const secSnap = await getDoc(doc(db, 'sections', sectionId));
+        if (cancelled || !secSnap.exists()) {
+          setLoading(false);
+          return;
+        }
+        const gradeLevel = secSnap.data().gradeLevel;
+        setCurrentGradeLevel(gradeLevel);
+
+        let pendingStudents: Student[] = [];
+        let enrolledStudents: Student[] = [];
+
+        // 3a. Pending students for this gradeLevel
+        const qPending = query(
+          collection(db, 'enrollments'),
+          where('gradeLevel', '==', gradeLevel),
+          where('status', '==', 'Pending')
+        );
+        unsubPending = onSnapshot(qPending, (sSnap) => {
+          pendingStudents = sSnap.docs.map(d => ({ id: d.id, ...d.data() } as Student));
+          setStudents([...pendingStudents, ...enrolledStudents]);
+        });
+
+        // 3b. Enrolled students for this sectionId
+        const qEnrolled = query(
+          collection(db, 'enrollments'),
+          where('sectionId', '==', sectionId),
+          where('status', 'in', ['Enrolled', 'Dropped', 'Transferred'])
+        );
+        unsubEnrolled = onSnapshot(qEnrolled, (sSnap) => {
+          enrolledStudents = sSnap.docs.map(d => ({ id: d.id, ...d.data() } as Student));
+          setStudents([...pendingStudents, ...enrolledStudents]);
+        });
+
+        // 4. Attendance for this section
+        const qAttendance = query(collection(db, 'attendance'), where('sectionId', '==', sectionId));
+        unsubAttendance = onSnapshot(qAttendance, (aSnap) => {
+          setAttendance(aSnap.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceEntry)));
+        });
+
+        // 5. All subjects
+        unsubSubjects = onSnapshot(query(collection(db, 'subjects')), (sSnap) => {
+          setSubjects(sSnap.docs.map(d => ({ id: d.id, ...d.data() } as TeacherSubject)));
+        });
+
+        setLoading(false);
+      } catch (err) {
+        console.error('[teacherData] Error fetching section:', err);
+        setLoading(false);
+      }
+    }, (err) => {
+      console.error('[teacherData] Assignment listener error:', err);
+      setLoading(false);
     });
 
-    return () => unsubAssign();
+    return () => {
+      cancelled = true;
+      unsubAssign();
+      unsubPending();
+      unsubEnrolled();
+      unsubAttendance();
+      unsubSubjects();
+    };
   }, [user]);
 
   const updateAttendance = async (studentId: string, date: string, status: 'Present' | 'Absent' | 'Late') => {

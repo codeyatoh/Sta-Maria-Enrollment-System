@@ -20,7 +20,6 @@ import { ClassroomsView } from '../components/admin/ClassroomsView';
 import { SubjectsView } from '../components/admin/SubjectsView';
 import { ReportsView } from '../components/admin/ReportsView';
 import { SetupWizard } from '../components/admin/SetupWizard';
-import { DocumentVerificationView } from '../components/shared/DocumentVerificationView';
 function AdminDashboardContent() {
   const navigate = useNavigate();
   const { setupComplete } = useAdminData();
@@ -59,12 +58,6 @@ function AdminDashboardContent() {
     label: 'Reports (SF1, SF4)',
     icon: FileText,
     category: 'Documents'
-  },
-  {
-    id: 'document-verification',
-    label: 'Document Verification',
-    icon: FileText,
-    category: 'Documents'
   }];
 
 
@@ -80,8 +73,6 @@ function AdminDashboardContent() {
         return <SubjectsView />;
       case 'reports':
         return <ReportsView />;
-      case 'document-verification':
-        return <DocumentVerificationView />;
       default:
         return <DashboardView />;
     }
