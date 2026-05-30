@@ -33,6 +33,8 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isAuthed() && (request.auth.uid == uid || isAdmin());
       allow write: if isAdmin();
+      allow create: if isAuthed() && request.auth.uid == uid && request.resource.data.role == 'parent';
+      allow update: if isAuthed() && request.auth.uid == uid && request.resource.data.role == resource.data.role;
     }
     
     // Enrollments
